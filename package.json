@@ -1,19 +1,19 @@
 {
-  "name": "@ziptied/image-cropper-uploader",
+  "name": "@ziptied/image-crop-upload",
   "version": "0.1.0",
-  "description": "Reusable React image cropper/uploader (pan/zoom/rotate) with WYSIWYG WebP export.",
+  "description": "Reusable image cropper with pan, zoom, rotation, and WebP export for React + Inertia",
   "type": "module",
   "sideEffects": false,
-  "license": "UNLICENSED",
+  "license": "MIT",
   "author": "ziptied",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ziptied/ImageCropUpload.git"
+    "url": "git+https://github.com/ziptied/image-cropper-uploader.git"
   },
   "bugs": {
-    "url": "https://github.com/ziptied/ImageCropUpload/issues"
+    "url": "https://github.com/ziptied/image-cropper-uploader/issues"
   },
-  "homepage": "https://github.com/ziptied/ImageCropUpload#readme",
+  "homepage": "https://github.com/ziptied/image-cropper-uploader#readme",
   "keywords": ["react", "inertia", "shadcn", "crop", "image", "webp", "canvas"],
   "scripts": {
     "build": "tsup",
@@ -23,8 +23,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "peerDependencies": {
-    "react": "^18.0.0",
-    "react-dom": "^18.0.0"
+    "react": ">=18",
+    "react-dom": ">=18"
   },
   "devDependencies": {
     "@types/react": "^18.3.0",
@@ -35,11 +35,12 @@
     "tsup": "^8.3.0",
     "typescript": "^5.7.0"
   },
-  "files": ["dist", "README.md"],
+  "files": ["dist"],
   "publishConfig": {
     "access": "public"
   },
   "main": "./dist/index.js",
+  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {

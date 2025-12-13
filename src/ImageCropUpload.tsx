@@ -2,12 +2,17 @@ import * as React from "react";
 import { createPortal } from "react-dom";
 
 import { CropOverlay } from "./CropOverlay";
+import CheckUnderline from "./icons/check-underline";
+import RotateObjClockwise from "./icons/rotate-obj-clockwise";
+import ShareLeft4 from "./icons/share-left-4";
+import Xmark from "./icons/xmark";
 import type { ImageCropUploadProps, Template } from "./types";
 import { clamp } from "./utils/clamp";
 import { cn } from "./utils/cn";
 import { computeCropFrame, getTemplateAspect } from "./utils/cropFrame";
 import { type DecodedImage, decodeImage } from "./utils/decodeImage";
 import { exportCroppedWebP } from "./utils/exportCroppedWebP";
+import { renderViewportCanvas } from "./utils/renderViewportCanvas";
 
 function getDefaultLabel() {
   return "Drop image here or click to browse";
@@ -21,6 +26,29 @@ function formatBytes(bytes: number) {
 function stripExtension(fileName: string) {
   const lastDot = fileName.lastIndexOf(".");
   return lastDot === -1 ? fileName : fileName.slice(0, lastDot);
+}
+
+function wrapRotationDegrees(degrees: number) {
+  // Keep rotation in [-180, 180] so the slider stays meaningful while auto-rotating.
+  const normalized = (((degrees + 180) % 360) + 360) % 360;
+  return normalized - 180;
+}
+
+function animateIconButtonPress(button: HTMLButtonElement) {
+  // Web Animations API keeps this dependency-free and scoped.
+  // The cubic-bezier approximates an easeInOutBack feel.
+  button.animate(
+    [
+      { transform: "scale(1)" },
+      { transform: "scale(1.03)" },
+      { transform: "scale(0.94)" },
+      { transform: "scale(1)" },
+    ],
+    {
+      duration: 420,
+      easing: "cubic-bezier(0.68,-0.6,0.32,1.6)",
+    },
+  );
 }
 
 function templateToLabel(template: Template) {
@@ -102,8 +130,7 @@ export function ImageCropUpload({
 
   const [decoded, setDecoded] = React.useState<DecodedImage | null>(null);
   const [originalFile, setOriginalFile] = React.useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
-  const previewCleanupRef = React.useRef<(() => void) | null>(null);
+  const previewCanvasRef = React.useRef<HTMLCanvasElement | null>(null);
 
   const [viewportSize, setViewportSize] = React.useState({
     width: 0,
@@ -129,24 +156,36 @@ export function ImageCropUpload({
 
   // Measure the viewport so crop frame can be responsive.
   React.useLayoutEffect(() => {
+    if (!editorOpen) return;
     const el = viewportRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => {
+    const updateSize = () => {
       const rect = el.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return;
       setViewportSize({ width: rect.width, height: rect.height });
-    });
+    };
+    // First measure can be 0 while the dialog is still being laid out.
+    // Measure again on the next paint to be safe (this fixes "1px image" reports).
+    updateSize();
+    requestAnimationFrame(updateSize);
+
+    const ro = new ResizeObserver(() => updateSize());
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [editorOpen]);
+
+  // If a fixed viewport is provided by the template, use it as a reliable fallback.
+  React.useEffect(() => {
+    if (!editorOpen) return;
+    const fixed = activeTemplate.viewport;
+    if (!fixed) return;
+    setViewportSize({ width: fixed.width, height: fixed.height });
+  }, [activeTemplate.viewport, editorOpen]);
 
   // Clean up decoded resources / object URLs.
   React.useEffect(() => {
     return () => decoded?.cleanup?.();
   }, [decoded]);
-
-  React.useEffect(() => {
-    return () => previewCleanupRef.current?.();
-  }, []);
 
   useFocusTrap(editorOpen, dialogRef);
 
@@ -166,17 +205,6 @@ export function ImageCropUpload({
     return Math.max(vw / decoded.width, vh / decoded.height);
   }, [decoded, viewportSize.width, viewportSize.height]);
 
-  const imageStyle = React.useMemo(() => {
-    if (!decoded) return undefined;
-    return {
-      width: `${decoded.width * baseScale}px`,
-      height: `${decoded.height * baseScale}px`,
-      transform: `translate(${pan.x}px, ${pan.y}px) rotate(${rotation}deg) scale(${zoom})`,
-      transformOrigin: "center center",
-      willChange: "transform",
-    } satisfies React.CSSProperties;
-  }, [decoded, baseScale, pan.x, pan.y, rotation, zoom]);
-
   function showError(message: string) {
     setErrorMessage(message);
   }
@@ -185,6 +213,25 @@ export function ImageCropUpload({
     setZoom(1);
     setRotation(0);
     setPan({ x: 0, y: 0 });
+  }
+
+  /**
+   * Zoom should feel like it's zooming "into what I'm looking at".
+   *
+   * We do that by keeping the *currently centered* image point anchored at the
+   * viewport center while the zoom changes.
+   *
+   * Math intuition:
+   * - `pan` is the screen-space offset of the image center from the viewport center.
+   * - If zoom changes from z -> z', the required pan becomes `pan * (z'/z)`.
+   */
+  function setZoomAnchored(nextZoom: number) {
+    setZoom((prevZoom) => {
+      if (prevZoom <= 0) return nextZoom;
+      const ratio = nextZoom / prevZoom;
+      setPan((p) => ({ x: p.x * ratio, y: p.y * ratio }));
+      return nextZoom;
+    });
   }
 
   async function loadFile(file: File) {
@@ -211,11 +258,6 @@ export function ImageCropUpload({
       setDecoded(decodedImage);
       setOriginalFile(file);
 
-      previewCleanupRef.current?.();
-      const objectUrl = URL.createObjectURL(file);
-      previewCleanupRef.current = () => URL.revokeObjectURL(objectUrl);
-      setPreviewUrl(objectUrl);
-
       resetTransform();
       setEditorOpen(true);
     } catch {
@@ -240,10 +282,6 @@ export function ImageCropUpload({
       setDecoded(decodedImage);
       setOriginalFile(file);
 
-      previewCleanupRef.current?.();
-      previewCleanupRef.current = null;
-      setPreviewUrl(url);
-
       resetTransform();
       setEditorOpen(true);
     } catch {
@@ -264,12 +302,36 @@ export function ImageCropUpload({
     // Keep dropzone ready for another upload.
     setDecoded(null);
     setOriginalFile(null);
-    setPreviewUrl(null);
-    previewCleanupRef.current?.();
-    previewCleanupRef.current = null;
 
     if (reason === "cancel") onCancel?.();
   }
+
+  // Render a canvas preview so export is truly WYSIWYG (same renderer as export).
+  React.useEffect(() => {
+    if (!editorOpen) return;
+    if (!decoded) return;
+    if (viewportSize.width <= 0 || viewportSize.height <= 0) return;
+    const canvas = previewCanvasRef.current;
+    if (!canvas) return;
+
+    renderViewportCanvas({
+      image: decoded,
+      viewportCss: viewportSize,
+      devicePixelRatio: window.devicePixelRatio || 1,
+      baseScale,
+      transform: { zoom, rotation, panX: pan.x, panY: pan.y },
+      targetCanvas: canvas,
+    });
+  }, [
+    baseScale,
+    decoded,
+    editorOpen,
+    pan.x,
+    pan.y,
+    rotation,
+    viewportSize,
+    zoom,
+  ]);
 
   async function onConfirm() {
     if (!decoded || !originalFile) return;
@@ -363,10 +425,6 @@ export function ImageCropUpload({
   }, [allowTemplateSwitch, templatePresets, template]);
 
   const canEditInitial = Boolean(initialImageUrl) && !disabled;
-  const viewportAspect =
-    activeTemplate.viewport?.width && activeTemplate.viewport?.height
-      ? activeTemplate.viewport.width / activeTemplate.viewport.height
-      : getTemplateAspect(activeTemplate);
 
   return (
     <div className={cn("w-full", className)}>
@@ -470,12 +528,35 @@ export function ImageCropUpload({
                   closeEditor("cancel");
                 }}
               >
+                <button
+                  type="button"
+                  aria-label="Close"
+                  title="Close"
+                  className={cn(
+                    "pointer-events-auto absolute right-3 top-3 z-50 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border bg-background/80",
+                    // Default: primary-ish if available, otherwise a readable gray.
+                    "border-transparent text-zinc-400 [color:hsl(var(--primary)/0.7)] hover:text-zinc-700",
+                    "hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                    "disabled:pointer-events-none disabled:opacity-50",
+                  )}
+                  disabled={processing}
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    closeEditor("cancel");
+                  }}
+                >
+                  <Xmark aria-hidden="true" className="h-4 w-4" />
+                </button>
+
                 <div className="mb-3 space-y-1">
                   <div
                     id="image-crop-title"
                     className="text-base font-semibold"
                   >
-                    Crop image
+                    Adjust Image
                   </div>
                   <div
                     id="image-crop-description"
@@ -540,33 +621,87 @@ export function ImageCropUpload({
                         : {
                             width: "100%",
                             maxWidth: "560px",
-                            aspectRatio: viewportAspect,
+                            height: "min(60vh, 420px)",
                           }),
                       touchAction: "none",
                     }}
                   >
                     <div
                       className={cn(
-                        "absolute inset-0 flex items-center justify-center",
+                        // Keep the image under the crop guide (overlay is always top-most).
+                        "absolute inset-0 z-10 flex items-center justify-center",
                         isDragging ? "cursor-grabbing" : "cursor-grab",
                       )}
                       style={{ touchAction: "none" }}
                     >
-                      {previewUrl ? (
-                        <img
-                          alt=""
-                          src={previewUrl}
-                          draggable={false}
-                          className="select-none"
-                          style={imageStyle}
-                        />
-                      ) : null}
+                      <canvas
+                        ref={previewCanvasRef}
+                        className="h-full w-full"
+                      />
                     </div>
 
                     <CropOverlay
+                      className="z-20"
                       shape={activeTemplate.shape}
                       frame={cropFrame}
+                      viewport={viewportSize}
                     />
+
+                    <div className="pointer-events-auto absolute right-2 top-2 z-50 flex flex-col gap-2">
+                      <button
+                        type="button"
+                        aria-label="Reset"
+                        title="Reset"
+                        // Keep this above the overlay and canvas so it's always clickable.
+                        className={cn(
+                          "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border bg-background/80",
+                          "border-white/50 bg-black/35 text-white backdrop-blur hover:bg-white/80 hover:text-black hover:border-white/80",
+                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                          "disabled:pointer-events-none disabled:opacity-50",
+                        )}
+                        disabled={processing}
+                        onPointerDown={(e) => {
+                          // Prevent the viewport's panning handler from capturing the pointer.
+                          e.stopPropagation();
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+
+                          const button = e.currentTarget;
+                          animateIconButtonPress(button);
+
+                          resetTransform();
+                        }}
+                      >
+                        <ShareLeft4 aria-hidden="true" className="h-4 w-4" />
+                      </button>
+
+                      <button
+                        type="button"
+                        aria-label="Rotate 90° clockwise"
+                        title="Rotate 90° clockwise"
+                        className={cn(
+                          "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border bg-background/80",
+                          "border-white/50 bg-black/35 text-white backdrop-blur hover:bg-white/80 hover:text-black hover:border-white/80",
+                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                          "disabled:pointer-events-none disabled:opacity-50",
+                        )}
+                        disabled={processing}
+                        onPointerDown={(e) => {
+                          e.stopPropagation();
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          animateIconButtonPress(e.currentTarget);
+                          setRotation((r) => wrapRotationDegrees(r + 90));
+                        }}
+                      >
+                        <RotateObjClockwise
+                          aria-hidden="true"
+                          className="h-4 w-4"
+                        />
+                      </button>
+                    </div>
                   </div>
 
                   <div className="space-y-4">
@@ -583,7 +718,9 @@ export function ImageCropUpload({
                         step={0.01}
                         value={zoom}
                         disabled={processing}
-                        onChange={(e) => setZoom(Number(e.target.value))}
+                        onChange={(e) =>
+                          setZoomAnchored(Number(e.target.value))
+                        }
                         className="w-full"
                       />
                     </div>
@@ -604,39 +741,6 @@ export function ImageCropUpload({
                         onChange={(e) => setRotation(Number(e.target.value))}
                         className="w-full"
                       />
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          className="rounded-md border px-2 py-1 text-xs hover:bg-muted disabled:opacity-50"
-                          disabled={processing}
-                          onClick={() =>
-                            setRotation((r) => clamp(r - 90, -180, 180))
-                          }
-                        >
-                          -90°
-                        </button>
-                        <button
-                          type="button"
-                          className="rounded-md border px-2 py-1 text-xs hover:bg-muted disabled:opacity-50"
-                          disabled={processing}
-                          onClick={() =>
-                            setRotation((r) => clamp(r + 90, -180, 180))
-                          }
-                        >
-                          +90°
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        className="rounded-md border px-3 py-2 text-sm hover:bg-muted disabled:opacity-50"
-                        disabled={processing}
-                        onClick={resetTransform}
-                      >
-                        Reset
-                      </button>
                     </div>
                   </div>
                 </div>
@@ -644,18 +748,11 @@ export function ImageCropUpload({
                 <div className="mt-4 flex items-center justify-end gap-2">
                   <button
                     type="button"
-                    className="rounded-md border px-4 py-2 text-sm hover:bg-muted disabled:opacity-50"
-                    disabled={processing}
-                    onClick={() => closeEditor("cancel")}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                     disabled={processing}
                     onClick={() => void onConfirm()}
                   >
+                    <CheckUnderline aria-hidden="true" className="h-4 w-4" />
                     {processing ? "Processing…" : "OK"}
                   </button>
                 </div>
