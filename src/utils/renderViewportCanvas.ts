@@ -11,6 +11,7 @@ export type ViewportRenderInput = {
     panX: number; // css px
     panY: number; // css px
   };
+  targetCanvas?: HTMLCanvasElement;
 };
 
 /**
@@ -25,7 +26,7 @@ export function renderViewportCanvas(input: ViewportRenderInput) {
   const viewportWidth = Math.max(1, Math.round(viewportWidthCss * dpr));
   const viewportHeight = Math.max(1, Math.round(viewportHeightCss * dpr));
 
-  const canvas = document.createElement("canvas");
+  const canvas = input.targetCanvas ?? document.createElement("canvas");
   canvas.width = viewportWidth;
   canvas.height = viewportHeight;
 
