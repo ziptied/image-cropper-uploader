@@ -1,5 +1,6 @@
 export type {
   CropShape,
+  ImageCropUploadAppearance,
   ImageCropUploadProps,
   ImageCropUploadResult,
   Template,
