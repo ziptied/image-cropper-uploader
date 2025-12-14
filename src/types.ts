@@ -53,6 +53,9 @@ export type ImageCropUploadAppearance = {
   toolbarButtonColor?: string;
   confirmButtonClassName?: string;
   confirmButtonStyle?: CSSProperties;
+  sliderClassName?: string;
+  sliderStyle?: CSSProperties;
+  modalBackground?: string;
 };
 
 export type ImageCropUploadProps = {
