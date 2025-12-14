@@ -21,10 +21,20 @@ import { exportCroppedWebP } from "./utils/exportCroppedWebP";
 import { renderViewportCanvas } from "./utils/renderViewportCanvas";
 
 type ResolvedAppearance = Required<
-  Omit<ImageCropUploadAppearance, "confirmButtonClassName" | "confirmButtonStyle">
+  Omit<
+    ImageCropUploadAppearance,
+    | "confirmButtonClassName"
+    | "confirmButtonStyle"
+    | "sliderClassName"
+    | "sliderStyle"
+    | "modalBackground"
+  >
 > & {
   confirmButtonClassName?: string;
   confirmButtonStyle?: React.CSSProperties;
+  sliderClassName?: string;
+  sliderStyle?: React.CSSProperties;
+  modalBackground?: string;
 };
 
 function getDefaultLabel() {
@@ -473,11 +483,36 @@ export function ImageCropUpload({
     if (appearance?.confirmButtonStyle !== undefined) {
       base.confirmButtonStyle = appearance.confirmButtonStyle;
     }
+    if (appearance?.sliderClassName !== undefined) {
+      base.sliderClassName = appearance.sliderClassName;
+    }
+    if (appearance?.sliderStyle !== undefined) {
+      base.sliderStyle = appearance.sliderStyle;
+    }
+    if (appearance?.modalBackground !== undefined) {
+      base.modalBackground = appearance.modalBackground;
+    }
     return base;
   }, [appearance]);
 
   const circleIconClasses =
     "flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-transparent text-current transition-colors aspect-square";
+
+  const sliderClassNames = React.useMemo(
+    () =>
+      cn(
+        "w-full appearance-none bg-transparent focus-visible:outline-none",
+        resolvedAppearance.sliderClassName,
+      ),
+    [resolvedAppearance.sliderClassName],
+  );
+
+  const sliderInlineStyle = React.useMemo<React.CSSProperties>(() => {
+    if (resolvedAppearance.sliderStyle) {
+      return { accentColor: "hsl(var(--accent))", ...resolvedAppearance.sliderStyle };
+    }
+    return { accentColor: "hsl(var(--accent))" };
+  }, [resolvedAppearance.sliderStyle]);
 
   const dropzoneStyle = React.useMemo<React.CSSProperties>(() => {
     return dragActive
@@ -643,7 +678,10 @@ export function ImageCropUpload({
 
       {editorOpen
         ? createPortal(
-            <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div
+              className="fixed inset-0 flex items-center justify-center"
+              style={{ zIndex: 500 }}
+            >
               <button
                 type="button"
                 aria-label="Close"
@@ -665,6 +703,11 @@ export function ImageCropUpload({
                   "relative z-10 w-[min(92vw,760px)] rounded-xl border bg-background p-4 shadow-lg",
                   "focus-visible:outline-none",
                 )}
+                style={
+                  resolvedAppearance.modalBackground
+                    ? { backgroundColor: resolvedAppearance.modalBackground }
+                    : undefined
+                }
                 open
                 onCancel={(e) => {
                   e.preventDefault();
@@ -873,7 +916,8 @@ export function ImageCropUpload({
                         onChange={(e) =>
                           setZoomAnchored(Number(e.target.value))
                         }
-                        className="w-full"
+                        className={sliderClassNames}
+                        style={sliderInlineStyle}
                       />
                     </div>
 
@@ -891,7 +935,8 @@ export function ImageCropUpload({
                         value={rotation}
                         disabled={processing}
                         onChange={(e) => setRotation(Number(e.target.value))}
-                        className="w-full"
+                        className={sliderClassNames}
+                        style={sliderInlineStyle}
                       />
                     </div>
                   </div>
