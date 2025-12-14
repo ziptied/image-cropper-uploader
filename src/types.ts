@@ -36,6 +36,15 @@ export type ImageCropUploadResult = {
   };
 };
 
+export type ImageCropUploadAppearance = {
+  dropzoneBackground?: string;
+  dropzoneBackgroundActive?: string;
+  dropzoneBorder?: string;
+  dropzoneBorderActive?: string;
+  iconBackground?: string;
+  iconColor?: string;
+};
+
 export type ImageCropUploadProps = {
   template: Template;
   onCropped: (result: ImageCropUploadResult) => void | Promise<void>;
@@ -50,4 +59,5 @@ export type ImageCropUploadProps = {
   className?: string;
   allowTemplateSwitch?: boolean;
   templatePresets?: Template[];
+  appearance?: ImageCropUploadAppearance;
 };
