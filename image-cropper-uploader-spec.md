@@ -532,9 +532,10 @@ Transitions:
 
 ## 19. Customization / Appearance API
 - Empty state uses shadcn/baseui tokens (accent) by default.
-- Consumers can override via `appearance?: { dropzoneBackground?, dropzoneBackgroundActive?, dropzoneBorder?, dropzoneBorderActive?, iconBackground?, iconColor?, dialogScrimColor?, closeButtonColor?, closeButtonHoverColor?, toolbarButtonBackground?, toolbarButtonBorder?, toolbarButtonColor?, confirmButtonClassName?, confirmButtonStyle? }`.
+- Consumers can override via `appearance?: { dropzoneBackground?, dropzoneBackgroundActive?, dropzoneBorder?, dropzoneBorderActive?, iconBackground?, iconColor?, dialogScrimColor?, closeButtonColor?, closeButtonHoverColor?, toolbarButtonBackground?, toolbarButtonBorder?, toolbarButtonColor?, confirmButtonClassName?, confirmButtonStyle?, sliderClassName?, sliderStyle?, modalBackground? }`.
 - Each color property accepts any CSS color (hex, rgb, hsl, CSS var string). Unset keys use the defaults above.
 - `confirmButtonClassName` is appended to the default OK button classes; `confirmButtonStyle` is applied inline.
+- Range inputs have `appearance: none;` applied so integrators can style `::-webkit-slider-thumb` / `::-moz-range-thumb` via the `sliderClassName`.
 
 ---
 

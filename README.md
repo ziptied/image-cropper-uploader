@@ -127,6 +127,9 @@ If you need tighter control, pass the `appearance` prop. All fields are optional
 | `toolbarButtonColor` | Reset/Rotate icon color. | `#fff` |
 | `confirmButtonClassName` | Extra classes appended to the OK button. | `""` |
 | `confirmButtonStyle` | Inline style object for the OK button. | `undefined` |
+| `sliderClassName` | Extra classes applied to both zoom/rotation sliders. | `""` |
+| `sliderStyle` | Inline slider styles. | `undefined` |
+| `modalBackground` | Dialog background fill (overrides `bg-background`). | `undefined` |
 
 Example:
 
@@ -143,7 +146,8 @@ Example:
 ```
 
 This pattern mirrors other design systems (Radix, shadcn/ui, BaseUI): we rely on the shared palette by default, but expose a small override surface so consumers (and automation/LLMs) can align the component with any design system without forking.  
-`confirmButtonClassName` is appended to the default OK button classes, so you can keep the base layout but inject your own tone/variant. `confirmButtonStyle` is applied directly via inline styles for theming systems that prefer CSS variables.
+`confirmButtonClassName` is appended to the default OK button classes, so you can keep the base layout but inject your own tone/variant. `confirmButtonStyle` is applied directly via inline styles for theming systems that prefer CSS variables.  
+`sliderClassName` / `sliderStyle` flow through to both zoom + rotation ranges so you can align them with your form controls. The component sets `appearance-none` on the inputs so WebKit/Firefox pseudo-class styling works; just target the provided class (or use Tailwind arbitrary selectors) for thumbs/tracks.
 
 ### Styling Notes
 
