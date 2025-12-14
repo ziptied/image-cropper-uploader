@@ -530,7 +530,14 @@ Transitions:
 
 ---
 
-## 19. Notes for Implementation Handoff
+## 19. Customization / Appearance API
+- Empty state uses shadcn/baseui tokens (accent) by default.
+- Consumers can override via `appearance?: { dropzoneBackground?, dropzoneBackgroundActive?, dropzoneBorder?, dropzoneBorderActive?, iconBackground?, iconColor? }`.
+- Each property accepts any CSS color (hex, rgb, hsl, CSS var string). Unset keys use the defaults above.
+
+---
+
+## 20. Notes for Implementation Handoff
 - The simplest, most reliable exporter is the **viewport-canvas render** approach.
 - Keep transforms consistent:
   - the same baseScale math used in UI must be used in viewportCanvas render.
