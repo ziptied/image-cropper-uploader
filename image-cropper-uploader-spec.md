@@ -536,6 +536,7 @@ Transitions:
 - Each color property accepts any CSS color (hex, rgb, hsl, CSS var string). Unset keys use the defaults above.
 - `confirmButtonClassName` is appended to the default OK button classes; `confirmButtonStyle` is applied inline.
 - Range inputs have `appearance: none;` applied so integrators can style `::-webkit-slider-thumb` / `::-moz-range-thumb` via the `sliderClassName`.
+- For full custom sliders, use `renderZoomControl` / `renderRotationControl`; each render prop receives `{ value, min, max, step, disabled, id, label, onChange }`.
 
 ---
 

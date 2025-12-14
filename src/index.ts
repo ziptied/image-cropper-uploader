@@ -3,6 +3,7 @@ export type {
   ImageCropUploadAppearance,
   ImageCropUploadProps,
   ImageCropUploadResult,
+  SliderRenderContext,
   Template,
 } from "./types";
 export { ImageCropUpload } from "./ImageCropUpload";

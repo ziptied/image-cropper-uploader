@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 export type CropShape = "circle" | "square" | "rect";
 
@@ -58,6 +58,19 @@ export type ImageCropUploadAppearance = {
   modalBackground?: string;
 };
 
+export type SliderRenderContext = {
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  disabled: boolean;
+  id: string;
+  label: string;
+  onChange: (value: number) => void;
+  className?: string;
+  style?: CSSProperties;
+};
+
 export type ImageCropUploadProps = {
   template: Template;
   onCropped: (result: ImageCropUploadResult) => void | Promise<void>;
@@ -73,4 +86,6 @@ export type ImageCropUploadProps = {
   allowTemplateSwitch?: boolean;
   templatePresets?: Template[];
   appearance?: ImageCropUploadAppearance;
+  renderZoomControl?: (context: SliderRenderContext) => ReactNode;
+  renderRotationControl?: (context: SliderRenderContext) => ReactNode;
 };

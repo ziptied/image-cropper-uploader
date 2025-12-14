@@ -2,15 +2,17 @@ import * as React from "react";
 import { createPortal } from "react-dom";
 
 import { CropOverlay } from "./CropOverlay";
+import { SliderControl } from "./components/SliderControl";
 import CheckUnderline from "./icons/check-underline";
+import ImageScale from "./icons/image-scale";
 import RotateObjClockwise from "./icons/rotate-obj-clockwise";
 import ShareLeft4 from "./icons/share-left-4";
 import Upload4 from "./icons/upload-4";
-import ImageScale from "./icons/image-scale";
 import Xmark from "./icons/xmark";
 import type {
   ImageCropUploadAppearance,
   ImageCropUploadProps,
+  SliderRenderContext,
   Template,
 } from "./types";
 import { clamp } from "./utils/clamp";
@@ -139,6 +141,8 @@ export function ImageCropUpload({
   allowTemplateSwitch = false,
   templatePresets,
   appearance,
+  renderZoomControl,
+  renderRotationControl,
 }: ImageCropUploadProps) {
   const inputRef = React.useRef<HTMLInputElement | null>(null);
   const viewportRef = React.useRef<HTMLDivElement | null>(null);
@@ -249,14 +253,14 @@ export function ImageCropUpload({
    * - `pan` is the screen-space offset of the image center from the viewport center.
    * - If zoom changes from z -> z', the required pan becomes `pan * (z'/z)`.
    */
-  function setZoomAnchored(nextZoom: number) {
+  const setZoomAnchored = React.useCallback((nextZoom: number) => {
     setZoom((prevZoom) => {
       if (prevZoom <= 0) return nextZoom;
       const ratio = nextZoom / prevZoom;
       setPan((p) => ({ x: p.x * ratio, y: p.y * ratio }));
       return nextZoom;
     });
-  }
+  }, []);
 
   async function loadFile(file: File) {
     setErrorMessage(null);
@@ -509,10 +513,45 @@ export function ImageCropUpload({
 
   const sliderInlineStyle = React.useMemo<React.CSSProperties>(() => {
     if (resolvedAppearance.sliderStyle) {
-      return { accentColor: "hsl(var(--accent))", ...resolvedAppearance.sliderStyle };
+      return {
+        accentColor: "hsl(var(--accent))",
+        ...resolvedAppearance.sliderStyle,
+      };
     }
     return { accentColor: "hsl(var(--accent))" };
   }, [resolvedAppearance.sliderStyle]);
+
+  const zoomRenderContext = React.useMemo<SliderRenderContext>(
+    () => ({
+      value: zoom,
+      min: 1,
+      max: 5,
+      step: 0.01,
+      disabled: processing,
+      id: "zoom",
+      label: "Zoom",
+      className: sliderClassNames,
+      style: sliderInlineStyle,
+      onChange: (value) => setZoomAnchored(value),
+    }),
+    [processing, sliderClassNames, sliderInlineStyle, zoom, setZoomAnchored],
+  );
+
+  const rotationRenderContext = React.useMemo<SliderRenderContext>(
+    () => ({
+      value: rotation,
+      min: -180,
+      max: 180,
+      step: 1,
+      disabled: processing,
+      id: "rotation",
+      label: "Rotation",
+      className: sliderClassNames,
+      style: sliderInlineStyle,
+      onChange: (value) => setRotation(value),
+    }),
+    [processing, rotation, sliderClassNames, sliderInlineStyle],
+  );
 
   const dropzoneStyle = React.useMemo<React.CSSProperties>(() => {
     return dragActive
@@ -637,9 +676,8 @@ export function ImageCropUpload({
             <Upload4 aria-hidden="true" className="h-7 w-7" />
           </div>
           {canEditInitial ? (
-            <div
-              role="button"
-              tabIndex={0}
+            <button
+              type="button"
               aria-label="Edit existing image"
               className={cn(
                 circleIconClasses,
@@ -651,24 +689,18 @@ export function ImageCropUpload({
                 if (!initialImageUrl) return;
                 void loadInitialUrl(initialImageUrl);
               }}
-              onKeyDown={(e) => {
-                if (e.key !== "Enter" && e.key !== " ") return;
-                e.preventDefault();
-                e.stopPropagation();
-                if (!initialImageUrl) return;
-                void loadInitialUrl(initialImageUrl);
-              }}
             >
-              <span className="sr-only">Edit existing image</span>
               <ImageScale aria-hidden="true" className="h-6 w-6" />
-            </div>
+            </button>
           ) : null}
         </div>
 
         <div className="space-y-1">
           <div className="text-lg font-semibold text-primary">{label}</div>
           <div className="text-sm text-muted-foreground">{sizeHint}</div>
-          <div className="text-xs text-muted-foreground/80">or drag and drop</div>
+          <div className="text-xs text-muted-foreground/80">
+            or drag and drop
+          </div>
         </div>
       </button>
 
@@ -846,13 +878,13 @@ export function ImageCropUpload({
                         aria-label="Reset"
                         title="Reset"
                         // Keep this above the overlay and canvas so it's always clickable.
-                      className={cn(
-                        "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border text-current backdrop-blur transition-colors",
-                        "hover:brightness-110",
-                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                        "disabled:pointer-events-none disabled:opacity-50",
-                      )}
-                      style={toolbarButtonStyle}
+                        className={cn(
+                          "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border text-current backdrop-blur transition-colors",
+                          "hover:brightness-110",
+                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                          "disabled:pointer-events-none disabled:opacity-50",
+                        )}
+                        style={toolbarButtonStyle}
                         disabled={processing}
                         onPointerDown={(e) => {
                           // Prevent the viewport's panning handler from capturing the pointer.
@@ -874,13 +906,13 @@ export function ImageCropUpload({
                         type="button"
                         aria-label="Rotate 90° clockwise"
                         title="Rotate 90° clockwise"
-                      className={cn(
-                        "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border text-current backdrop-blur transition-colors",
-                        "hover:brightness-110",
-                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                        "disabled:pointer-events-none disabled:opacity-50",
-                      )}
-                      style={toolbarButtonStyle}
+                        className={cn(
+                          "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border text-current backdrop-blur transition-colors",
+                          "hover:brightness-110",
+                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                          "disabled:pointer-events-none disabled:opacity-50",
+                        )}
+                        style={toolbarButtonStyle}
                         disabled={processing}
                         onPointerDown={(e) => {
                           e.stopPropagation();
@@ -901,43 +933,19 @@ export function ImageCropUpload({
 
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium" htmlFor="zoom">
-                        Zoom
-                      </label>
-                      <input
-                        id="zoom"
-                        aria-label="Zoom"
-                        type="range"
-                        min={1}
-                        max={5}
-                        step={0.01}
-                        value={zoom}
-                        disabled={processing}
-                        onChange={(e) =>
-                          setZoomAnchored(Number(e.target.value))
-                        }
-                        className={sliderClassNames}
-                        style={sliderInlineStyle}
-                      />
+                      {renderZoomControl ? (
+                        renderZoomControl(zoomRenderContext)
+                      ) : (
+                        <SliderControl {...zoomRenderContext} />
+                      )}
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-sm font-medium" htmlFor="rotation">
-                        Rotation
-                      </label>
-                      <input
-                        id="rotation"
-                        aria-label="Rotation"
-                        type="range"
-                        min={-180}
-                        max={180}
-                        step={1}
-                        value={rotation}
-                        disabled={processing}
-                        onChange={(e) => setRotation(Number(e.target.value))}
-                        className={sliderClassNames}
-                        style={sliderInlineStyle}
-                      />
+                      {renderRotationControl ? (
+                        renderRotationControl(rotationRenderContext)
+                      ) : (
+                        <SliderControl {...rotationRenderContext} />
+                      )}
                     </div>
                   </div>
                 </div>

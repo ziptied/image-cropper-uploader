@@ -103,6 +103,8 @@ Common templates:
 - `allowTemplateSwitch`: lets users choose templates in the modal.
 - `templatePresets`: template list used when `allowTemplateSwitch` is enabled.
 - `appearance`: optional object for overriding default colors (see below).
+- `renderZoomControl`: optional render prop for replacing the built-in zoom slider.
+- `renderRotationControl`: optional render prop for replacing the built-in rotation slider.
 
 ### Customization & Theming
 
@@ -147,7 +149,8 @@ Example:
 
 This pattern mirrors other design systems (Radix, shadcn/ui, BaseUI): we rely on the shared palette by default, but expose a small override surface so consumers (and automation/LLMs) can align the component with any design system without forking.  
 `confirmButtonClassName` is appended to the default OK button classes, so you can keep the base layout but inject your own tone/variant. `confirmButtonStyle` is applied directly via inline styles for theming systems that prefer CSS variables.  
-`sliderClassName` / `sliderStyle` flow through to both zoom + rotation ranges so you can align them with your form controls. The component sets `appearance-none` on the inputs so WebKit/Firefox pseudo-class styling works; just target the provided class (or use Tailwind arbitrary selectors) for thumbs/tracks.
+`sliderClassName` / `sliderStyle` flow through to both zoom + rotation ranges so you can align them with your form controls. The component sets `appearance-none` on the inputs so WebKit/Firefox pseudo-class styling works; just target the provided class (or use Tailwind arbitrary selectors) for thumbs/tracks.  
+Need to drop in a full custom slider (e.g. shadcn’s Radix slider)? Provide `renderZoomControl={(ctx) => <YourSlider value={ctx.value} onValueChange={ctx.onChange} …/>}` and/or `renderRotationControl`. Each render prop receives `{ value, min, max, step, disabled, id, label, onChange }`.
 
 ### Styling Notes
 
@@ -170,7 +173,8 @@ Recommended instruction format to an LLM (consumer app):
 2) Add/update a local `const avatarTemplate: Template = { shape: "circle", output: { width: 512, height: 512 }, viewport: { width: 360, height: 360 }, circleAlphaOutput: false }`.  
 3) Replace `template={logoUploadTemplate}` with `template={avatarTemplate}`.  
 4) Need branded drop zone / scrim / OK button? Pass `appearance={{ dropzoneBackground: "hsl(var(--primary)/0.1)", dialogScrimColor: "rgba(9,9,11,0.7)", confirmButtonClassName: "bg-emerald-600 hover:bg-emerald-500" }}` (no fork required).  
-5) Don’t modify this package unless the behavior is missing/buggy.
+5) Need shadcn/BaseUI sliders? Use `renderZoomControl` / `renderRotationControl` to render your Radix slider and call `ctx.onChange(newValue)`.  
+6) Don’t modify this package unless the behavior is missing/buggy.
 
 ---
 
