@@ -20,6 +20,13 @@ import { type DecodedImage, decodeImage } from "./utils/decodeImage";
 import { exportCroppedWebP } from "./utils/exportCroppedWebP";
 import { renderViewportCanvas } from "./utils/renderViewportCanvas";
 
+type ResolvedAppearance = Required<
+  Omit<ImageCropUploadAppearance, "confirmButtonClassName" | "confirmButtonStyle">
+> & {
+  confirmButtonClassName?: string;
+  confirmButtonStyle?: React.CSSProperties;
+};
+
 function getDefaultLabel() {
   return "Choose a file to upload";
 }
@@ -438,8 +445,8 @@ export function ImageCropUpload({
       ? `PNG, JPG up to ${formatBytes(maxBytes)}`
       : "PNG, JPG, WebP up to 10MB";
 
-  const resolvedAppearance = React.useMemo<ImageCropUploadAppearance>(() => {
-    return {
+  const resolvedAppearance = React.useMemo<ResolvedAppearance>(() => {
+    const base: ResolvedAppearance = {
       dropzoneBackground:
         appearance?.dropzoneBackground ?? "hsl(var(--accent)/0.08)",
       dropzoneBackgroundActive:
@@ -449,7 +456,24 @@ export function ImageCropUpload({
         appearance?.dropzoneBorderActive ?? "hsl(var(--accent)/0.8)",
       iconBackground: appearance?.iconBackground ?? "hsl(var(--accent)/0.16)",
       iconColor: appearance?.iconColor ?? "hsl(var(--accent))",
+      dialogScrimColor: appearance?.dialogScrimColor ?? "rgba(0,0,0,0.6)",
+      closeButtonColor:
+        appearance?.closeButtonColor ?? "hsl(var(--muted-foreground))",
+      closeButtonHoverColor:
+        appearance?.closeButtonHoverColor ?? "hsl(var(--foreground))",
+      toolbarButtonBackground:
+        appearance?.toolbarButtonBackground ?? "rgba(0,0,0,0.35)",
+      toolbarButtonBorder:
+        appearance?.toolbarButtonBorder ?? "rgba(255,255,255,0.5)",
+      toolbarButtonColor: appearance?.toolbarButtonColor ?? "#fff",
     };
+    if (appearance?.confirmButtonClassName !== undefined) {
+      base.confirmButtonClassName = appearance.confirmButtonClassName;
+    }
+    if (appearance?.confirmButtonStyle !== undefined) {
+      base.confirmButtonStyle = appearance.confirmButtonStyle;
+    }
+    return base;
   }, [appearance]);
 
   const circleIconClasses =
@@ -465,14 +489,55 @@ export function ImageCropUpload({
           backgroundColor: resolvedAppearance.dropzoneBackground,
           borderColor: resolvedAppearance.dropzoneBorder,
         };
-  }, [dragActive, resolvedAppearance]);
+  }, [
+    dragActive,
+    resolvedAppearance.dropzoneBackground,
+    resolvedAppearance.dropzoneBackgroundActive,
+    resolvedAppearance.dropzoneBorder,
+    resolvedAppearance.dropzoneBorderActive,
+  ]);
 
   const iconStyle = React.useMemo<React.CSSProperties>(
     () => ({
       backgroundColor: resolvedAppearance.iconBackground,
       color: resolvedAppearance.iconColor,
     }),
-    [resolvedAppearance],
+    [resolvedAppearance.iconBackground, resolvedAppearance.iconColor],
+  );
+
+  const toolbarButtonStyle = React.useMemo<React.CSSProperties>(
+    () => ({
+      backgroundColor: resolvedAppearance.toolbarButtonBackground,
+      borderColor: resolvedAppearance.toolbarButtonBorder,
+      color: resolvedAppearance.toolbarButtonColor,
+    }),
+    [
+      resolvedAppearance.toolbarButtonBackground,
+      resolvedAppearance.toolbarButtonBorder,
+      resolvedAppearance.toolbarButtonColor,
+    ],
+  );
+
+  const closeButtonColors = React.useMemo(
+    () => ({
+      base: resolvedAppearance.closeButtonColor,
+      hover:
+        resolvedAppearance.closeButtonHoverColor ??
+        resolvedAppearance.closeButtonColor,
+    }),
+    [
+      resolvedAppearance.closeButtonColor,
+      resolvedAppearance.closeButtonHoverColor,
+    ],
+  );
+
+  const confirmButtonClassName = React.useMemo(
+    () =>
+      cn(
+        "inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50",
+        resolvedAppearance.confirmButtonClassName,
+      ),
+    [resolvedAppearance.confirmButtonClassName],
   );
 
   return (
@@ -582,7 +647,8 @@ export function ImageCropUpload({
               <button
                 type="button"
                 aria-label="Close"
-                className="absolute inset-0 bg-black/60"
+                className="absolute inset-0"
+                style={{ backgroundColor: resolvedAppearance.dialogScrimColor }}
                 disabled={processing}
                 tabIndex={-1}
                 onClick={() => {
@@ -612,12 +678,18 @@ export function ImageCropUpload({
                   title="Close"
                   className={cn(
                     "pointer-events-auto absolute right-3 top-3 z-50 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border bg-background/80",
-                    // Default: primary-ish if available, otherwise a readable gray.
-                    "border-transparent text-zinc-400 [color:hsl(var(--primary)/0.7)] hover:text-zinc-700",
+                    "border-transparent text-current hover:opacity-80",
                     "hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                     "disabled:pointer-events-none disabled:opacity-50",
                   )}
                   disabled={processing}
+                  style={{ color: closeButtonColors.base }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = closeButtonColors.hover;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = closeButtonColors.base;
+                  }}
                   onPointerDown={(e) => {
                     e.stopPropagation();
                   }}
@@ -731,12 +803,13 @@ export function ImageCropUpload({
                         aria-label="Reset"
                         title="Reset"
                         // Keep this above the overlay and canvas so it's always clickable.
-                        className={cn(
-                          "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border bg-background/80",
-                          "border-white/50 bg-black/35 text-white backdrop-blur hover:bg-white/80 hover:text-black hover:border-white/80",
-                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                          "disabled:pointer-events-none disabled:opacity-50",
-                        )}
+                      className={cn(
+                        "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border text-current backdrop-blur transition-colors",
+                        "hover:brightness-110",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                        "disabled:pointer-events-none disabled:opacity-50",
+                      )}
+                      style={toolbarButtonStyle}
                         disabled={processing}
                         onPointerDown={(e) => {
                           // Prevent the viewport's panning handler from capturing the pointer.
@@ -758,12 +831,13 @@ export function ImageCropUpload({
                         type="button"
                         aria-label="Rotate 90° clockwise"
                         title="Rotate 90° clockwise"
-                        className={cn(
-                          "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border bg-background/80",
-                          "border-white/50 bg-black/35 text-white backdrop-blur hover:bg-white/80 hover:text-black hover:border-white/80",
-                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                          "disabled:pointer-events-none disabled:opacity-50",
-                        )}
+                      className={cn(
+                        "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border text-current backdrop-blur transition-colors",
+                        "hover:brightness-110",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                        "disabled:pointer-events-none disabled:opacity-50",
+                      )}
+                      style={toolbarButtonStyle}
                         disabled={processing}
                         onPointerDown={(e) => {
                           e.stopPropagation();
@@ -826,7 +900,8 @@ export function ImageCropUpload({
                 <div className="mt-4 flex items-center justify-end gap-2">
                   <button
                     type="button"
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                    className={confirmButtonClassName}
+                    style={resolvedAppearance.confirmButtonStyle}
                     disabled={processing}
                     onClick={() => void onConfirm()}
                   >
