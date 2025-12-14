@@ -1,3 +1,5 @@
+import type { CSSProperties } from "react";
+
 export type CropShape = "circle" | "square" | "rect";
 
 export type Template = {
@@ -43,6 +45,14 @@ export type ImageCropUploadAppearance = {
   dropzoneBorderActive?: string;
   iconBackground?: string;
   iconColor?: string;
+  dialogScrimColor?: string;
+  closeButtonColor?: string;
+  closeButtonHoverColor?: string;
+  toolbarButtonBackground?: string;
+  toolbarButtonBorder?: string;
+  toolbarButtonColor?: string;
+  confirmButtonClassName?: string;
+  confirmButtonStyle?: CSSProperties;
 };
 
 export type ImageCropUploadProps = {
