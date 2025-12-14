@@ -532,8 +532,9 @@ Transitions:
 
 ## 19. Customization / Appearance API
 - Empty state uses shadcn/baseui tokens (accent) by default.
-- Consumers can override via `appearance?: { dropzoneBackground?, dropzoneBackgroundActive?, dropzoneBorder?, dropzoneBorderActive?, iconBackground?, iconColor? }`.
-- Each property accepts any CSS color (hex, rgb, hsl, CSS var string). Unset keys use the defaults above.
+- Consumers can override via `appearance?: { dropzoneBackground?, dropzoneBackgroundActive?, dropzoneBorder?, dropzoneBorderActive?, iconBackground?, iconColor?, dialogScrimColor?, closeButtonColor?, closeButtonHoverColor?, toolbarButtonBackground?, toolbarButtonBorder?, toolbarButtonColor?, confirmButtonClassName?, confirmButtonStyle? }`.
+- Each color property accepts any CSS color (hex, rgb, hsl, CSS var string). Unset keys use the defaults above.
+- `confirmButtonClassName` is appended to the default OK button classes; `confirmButtonStyle` is applied inline.
 
 ---
 
