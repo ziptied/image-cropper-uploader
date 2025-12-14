@@ -5,8 +5,14 @@ import { CropOverlay } from "./CropOverlay";
 import CheckUnderline from "./icons/check-underline";
 import RotateObjClockwise from "./icons/rotate-obj-clockwise";
 import ShareLeft4 from "./icons/share-left-4";
+import Upload4 from "./icons/upload-4";
+import ImageScale from "./icons/image-scale";
 import Xmark from "./icons/xmark";
-import type { ImageCropUploadProps, Template } from "./types";
+import type {
+  ImageCropUploadAppearance,
+  ImageCropUploadProps,
+  Template,
+} from "./types";
 import { clamp } from "./utils/clamp";
 import { cn } from "./utils/cn";
 import { computeCropFrame, getTemplateAspect } from "./utils/cropFrame";
@@ -15,7 +21,7 @@ import { exportCroppedWebP } from "./utils/exportCroppedWebP";
 import { renderViewportCanvas } from "./utils/renderViewportCanvas";
 
 function getDefaultLabel() {
-  return "Drop image here or click to browse";
+  return "Choose a file to upload";
 }
 
 function formatBytes(bytes: number) {
@@ -115,6 +121,7 @@ export function ImageCropUpload({
   className,
   allowTemplateSwitch = false,
   templatePresets,
+  appearance,
 }: ImageCropUploadProps) {
   const inputRef = React.useRef<HTMLInputElement | null>(null);
   const viewportRef = React.useRef<HTMLDivElement | null>(null);
@@ -426,8 +433,50 @@ export function ImageCropUpload({
 
   const canEditInitial = Boolean(initialImageUrl) && !disabled;
 
+  const sizeHint =
+    maxBytes != null
+      ? `PNG, JPG up to ${formatBytes(maxBytes)}`
+      : "PNG, JPG, WebP up to 10MB";
+
+  const resolvedAppearance = React.useMemo<ImageCropUploadAppearance>(() => {
+    return {
+      dropzoneBackground:
+        appearance?.dropzoneBackground ?? "hsl(var(--accent)/0.08)",
+      dropzoneBackgroundActive:
+        appearance?.dropzoneBackgroundActive ?? "hsl(var(--accent)/0.16)",
+      dropzoneBorder: appearance?.dropzoneBorder ?? "hsl(var(--accent)/0.4)",
+      dropzoneBorderActive:
+        appearance?.dropzoneBorderActive ?? "hsl(var(--accent)/0.8)",
+      iconBackground: appearance?.iconBackground ?? "hsl(var(--accent)/0.16)",
+      iconColor: appearance?.iconColor ?? "hsl(var(--accent))",
+    };
+  }, [appearance]);
+
+  const circleIconClasses =
+    "flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-transparent text-current transition-colors aspect-square";
+
+  const dropzoneStyle = React.useMemo<React.CSSProperties>(() => {
+    return dragActive
+      ? {
+          backgroundColor: resolvedAppearance.dropzoneBackgroundActive,
+          borderColor: resolvedAppearance.dropzoneBorderActive,
+        }
+      : {
+          backgroundColor: resolvedAppearance.dropzoneBackground,
+          borderColor: resolvedAppearance.dropzoneBorder,
+        };
+  }, [dragActive, resolvedAppearance]);
+
+  const iconStyle = React.useMemo<React.CSSProperties>(
+    () => ({
+      backgroundColor: resolvedAppearance.iconBackground,
+      color: resolvedAppearance.iconColor,
+    }),
+    [resolvedAppearance],
+  );
+
   return (
-    <div className={cn("w-full", className)}>
+    <div className={cn("flex h-full w-full flex-col gap-3", className)}>
       <input
         ref={inputRef}
         type="file"
@@ -444,58 +493,87 @@ export function ImageCropUpload({
 
       <button
         type="button"
+        disabled={disabled}
         className={cn(
-          "relative flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed p-6 text-center",
-          "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-          dragActive && "border-primary bg-muted/30",
+          "group relative flex min-h-[260px] w-full flex-1 cursor-pointer flex-col items-center justify-center gap-5 rounded-2xl border border-dashed",
+          "bg-transparent p-8 text-center backdrop-blur transition-all",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
           disabled && "cursor-not-allowed opacity-60",
         )}
-        disabled={disabled}
+        style={dropzoneStyle}
         onClick={() => {
+          if (disabled) return;
           openFilePicker();
         }}
         onDragEnter={(e) => {
           e.preventDefault();
+          if (disabled) return;
           setDragActive(true);
         }}
         onDragOver={(e) => {
           e.preventDefault();
+          if (disabled) return;
           setDragActive(true);
         }}
         onDragLeave={(e) => {
           e.preventDefault();
+          if (disabled) return;
           setDragActive(false);
         }}
         onDrop={(e) => {
           e.preventDefault();
+          if (disabled) return;
           setDragActive(false);
           const file = e.dataTransfer.files?.[0];
           if (!file) return;
           void loadFile(file);
         }}
       >
-        <div className="text-sm font-medium">{label}</div>
-        <div className="text-xs text-muted-foreground">
-          {maxBytes != null ? `Max size: ${formatBytes(maxBytes)}.` : " "}
+        <div className="flex items-center justify-center gap-3">
+          <div
+            className={cn(circleIconClasses, "group-hover:brightness-110")}
+            style={iconStyle}
+          >
+            <Upload4 aria-hidden="true" className="h-7 w-7" />
+          </div>
+          {canEditInitial ? (
+            <div
+              role="button"
+              tabIndex={0}
+              aria-label="Edit existing image"
+              className={cn(
+                circleIconClasses,
+                "hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+              )}
+              style={iconStyle}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!initialImageUrl) return;
+                void loadInitialUrl(initialImageUrl);
+              }}
+              onKeyDown={(e) => {
+                if (e.key !== "Enter" && e.key !== " ") return;
+                e.preventDefault();
+                e.stopPropagation();
+                if (!initialImageUrl) return;
+                void loadInitialUrl(initialImageUrl);
+              }}
+            >
+              <span className="sr-only">Edit existing image</span>
+              <ImageScale aria-hidden="true" className="h-6 w-6" />
+            </div>
+          ) : null}
+        </div>
+
+        <div className="space-y-1">
+          <div className="text-lg font-semibold text-primary">{label}</div>
+          <div className="text-sm text-muted-foreground">{sizeHint}</div>
+          <div className="text-xs text-muted-foreground/80">or drag and drop</div>
         </div>
       </button>
 
       {errorMessage ? (
         <div className="mt-2 text-sm text-destructive">{errorMessage}</div>
-      ) : null}
-
-      {canEditInitial ? (
-        <button
-          type="button"
-          className="mt-2 rounded-md border px-3 py-2 text-sm hover:bg-muted disabled:opacity-50"
-          disabled={disabled}
-          onClick={() => {
-            if (!initialImageUrl) return;
-            void loadInitialUrl(initialImageUrl);
-          }}
-        >
-          Edit existing image
-        </button>
       ) : null}
 
       {editorOpen
