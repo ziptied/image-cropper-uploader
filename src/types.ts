@@ -55,6 +55,11 @@ export type ImageCropUploadAppearance = {
   confirmButtonStyle?: CSSProperties;
   sliderClassName?: string;
   sliderStyle?: CSSProperties;
+  sliderTrackColor?: string;
+  sliderRangeColor?: string;
+  sliderThumbColor?: string;
+  sliderThumbBorderColor?: string;
+  sliderThumbRadius?: CSSProperties["borderRadius"];
   modalBackground?: string;
 };
 
@@ -69,6 +74,9 @@ export type SliderRenderContext = {
   onChange: (value: number) => void;
   className?: string;
   style?: CSSProperties;
+  trackStyle?: CSSProperties;
+  rangeStyle?: CSSProperties;
+  thumbStyle?: CSSProperties;
 };
 
 export type ImageCropUploadProps = {
