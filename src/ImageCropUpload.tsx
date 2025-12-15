@@ -29,6 +29,11 @@ type ResolvedAppearance = Required<
     | "confirmButtonStyle"
     | "sliderClassName"
     | "sliderStyle"
+    | "sliderTrackColor"
+    | "sliderRangeColor"
+    | "sliderThumbColor"
+    | "sliderThumbBorderColor"
+    | "sliderThumbRadius"
     | "modalBackground"
   >
 > & {
@@ -36,6 +41,11 @@ type ResolvedAppearance = Required<
   confirmButtonStyle?: React.CSSProperties;
   sliderClassName?: string;
   sliderStyle?: React.CSSProperties;
+  sliderTrackColor?: string;
+  sliderRangeColor?: string;
+  sliderThumbColor?: string;
+  sliderThumbBorderColor?: string;
+  sliderThumbRadius?: React.CSSProperties["borderRadius"];
   modalBackground?: string;
 };
 
@@ -480,6 +490,15 @@ export function ImageCropUpload({
       toolbarButtonBorder:
         appearance?.toolbarButtonBorder ?? "rgba(255,255,255,0.5)",
       toolbarButtonColor: appearance?.toolbarButtonColor ?? "#fff",
+      sliderTrackColor: appearance?.sliderTrackColor ?? "hsl(var(--muted))",
+      sliderRangeColor: appearance?.sliderRangeColor ?? "hsl(var(--accent))",
+      sliderThumbColor:
+        appearance?.sliderThumbColor ?? "hsl(var(--background))",
+      sliderThumbBorderColor:
+        appearance?.sliderThumbBorderColor ??
+        "color-mix(in srgb, hsl(var(--accent)) 55%, transparent)",
+      sliderThumbRadius:
+        appearance?.sliderThumbRadius ?? "var(--radius-sm, 0.25rem)",
     };
     if (appearance?.confirmButtonClassName !== undefined) {
       base.confirmButtonClassName = appearance.confirmButtonClassName;
@@ -521,6 +540,34 @@ export function ImageCropUpload({
     return { accentColor: "hsl(var(--accent))" };
   }, [resolvedAppearance.sliderStyle]);
 
+  const sliderTrackStyle = React.useMemo<React.CSSProperties>(
+    () => ({
+      backgroundColor: resolvedAppearance.sliderTrackColor,
+      borderRadius: "var(--radius-sm, 0.25rem)",
+    }),
+    [resolvedAppearance.sliderTrackColor],
+  );
+
+  const sliderRangeStyle = React.useMemo<React.CSSProperties>(
+    () => ({
+      backgroundColor: resolvedAppearance.sliderRangeColor,
+    }),
+    [resolvedAppearance.sliderRangeColor],
+  );
+
+  const sliderThumbStyle = React.useMemo<React.CSSProperties>(
+    () => ({
+      backgroundColor: resolvedAppearance.sliderThumbColor,
+      borderColor: resolvedAppearance.sliderThumbBorderColor,
+      borderRadius: resolvedAppearance.sliderThumbRadius,
+    }),
+    [
+      resolvedAppearance.sliderThumbBorderColor,
+      resolvedAppearance.sliderThumbColor,
+      resolvedAppearance.sliderThumbRadius,
+    ],
+  );
+
   const zoomRenderContext = React.useMemo<SliderRenderContext>(
     () => ({
       value: zoom,
@@ -532,9 +579,21 @@ export function ImageCropUpload({
       label: "Zoom",
       className: sliderClassNames,
       style: sliderInlineStyle,
+      trackStyle: sliderTrackStyle,
+      rangeStyle: sliderRangeStyle,
+      thumbStyle: sliderThumbStyle,
       onChange: (value) => setZoomAnchored(value),
     }),
-    [processing, sliderClassNames, sliderInlineStyle, zoom, setZoomAnchored],
+    [
+      processing,
+      sliderClassNames,
+      sliderInlineStyle,
+      sliderTrackStyle,
+      sliderRangeStyle,
+      sliderThumbStyle,
+      zoom,
+      setZoomAnchored,
+    ],
   );
 
   const rotationRenderContext = React.useMemo<SliderRenderContext>(
@@ -548,9 +607,20 @@ export function ImageCropUpload({
       label: "Rotation",
       className: sliderClassNames,
       style: sliderInlineStyle,
+      trackStyle: sliderTrackStyle,
+      rangeStyle: sliderRangeStyle,
+      thumbStyle: sliderThumbStyle,
       onChange: (value) => setRotation(value),
     }),
-    [processing, rotation, sliderClassNames, sliderInlineStyle],
+    [
+      processing,
+      rotation,
+      sliderClassNames,
+      sliderInlineStyle,
+      sliderTrackStyle,
+      sliderRangeStyle,
+      sliderThumbStyle,
+    ],
   );
 
   const dropzoneStyle = React.useMemo<React.CSSProperties>(() => {
@@ -872,7 +942,7 @@ export function ImageCropUpload({
                       viewport={viewportSize}
                     />
 
-                    <div className="pointer-events-auto absolute right-2 top-2 z-50 flex flex-col gap-2">
+                    <div className="pointer-events-auto absolute right-2 top-4 z-50 flex flex-col gap-2">
                       <button
                         type="button"
                         aria-label="Reset"
