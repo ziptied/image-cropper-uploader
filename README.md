@@ -130,7 +130,12 @@ If you need tighter control, pass the `appearance` prop. All fields are optional
 | `confirmButtonClassName` | Extra classes appended to the OK button. | `""` |
 | `confirmButtonStyle` | Inline style object for the OK button. | `undefined` |
 | `sliderClassName` | Extra classes applied to both zoom/rotation sliders. | `""` |
-| `sliderStyle` | Inline slider styles. | `undefined` |
+| `sliderStyle` | Inline slider styles (apply at the Radix root). | `undefined` |
+| `sliderTrackColor` | Background color of the slider track. | `hsl(var(--muted))` |
+| `sliderRangeColor` | Foreground (filled) portion color. | `hsl(var(--accent))` |
+| `sliderThumbColor` | Thumb fill color. | `hsl(var(--background))` |
+| `sliderThumbBorderColor` | Thumb border color. | `color-mix(in srgb, hsl(var(--accent)) 55%, transparent)` |
+| `sliderThumbRadius` | Thumb corner radius (defaults to `rounded-sm`). | `var(--radius-sm, 0.25rem)` |
 | `modalBackground` | Dialog background fill (overrides `bg-background`). | `undefined` |
 
 Example:
@@ -149,8 +154,7 @@ Example:
 
 This pattern mirrors other design systems (Radix, shadcn/ui, BaseUI): we rely on the shared palette by default, but expose a small override surface so consumers (and automation/LLMs) can align the component with any design system without forking.  
 `confirmButtonClassName` is appended to the default OK button classes, so you can keep the base layout but inject your own tone/variant. `confirmButtonStyle` is applied directly via inline styles for theming systems that prefer CSS variables.  
-`sliderClassName` / `sliderStyle` flow through to both zoom + rotation ranges so you can align them with your form controls. The component sets `appearance-none` on the inputs so WebKit/Firefox pseudo-class styling works; just target the provided class (or use Tailwind arbitrary selectors) for thumbs/tracks.  
-Need to drop in a full custom slider (e.g. shadcn’s Radix slider)? Provide `renderZoomControl={(ctx) => <YourSlider value={ctx.value} onValueChange={ctx.onChange} …/>}` and/or `renderRotationControl`. Each render prop receives `{ value, min, max, step, disabled, id, label, onChange }`.
+Slider controls now use Radix Slider primitives; `sliderClassName` / `sliderStyle` target the root, while the new `sliderTrackColor`, `sliderRangeColor`, `sliderThumbColor`, `sliderThumbBorderColor`, and `sliderThumbRadius` tokens handle the built-in visual treatment (track fill, active range, thumb shape). Need a bespoke slider? Provide `renderZoomControl={(ctx) => <YourSlider value={ctx.value} onValueChange={ctx.onChange} …/>}` and/or `renderRotationControl`. Each render prop receives `{ value, min, max, step, disabled, id, label, onChange, className, style }`.
 
 ### Styling Notes
 
