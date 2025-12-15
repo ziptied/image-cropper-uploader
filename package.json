@@ -1,6 +1,6 @@
 {
   "name": "@ziptied/image-crop-upload",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Reusable image cropper with pan, zoom, rotation, and WebP export for React + Inertia",
   "type": "module",
   "sideEffects": false,
