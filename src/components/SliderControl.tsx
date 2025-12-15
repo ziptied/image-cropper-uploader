@@ -14,6 +14,9 @@ type SliderControlProps = {
   onChange: (value: number) => void;
   className?: string;
   style?: React.CSSProperties;
+  trackStyle?: React.CSSProperties;
+  rangeStyle?: React.CSSProperties;
+  thumbStyle?: React.CSSProperties;
 };
 
 export function SliderControl({
@@ -27,6 +30,9 @@ export function SliderControl({
   onChange,
   className,
   style,
+  trackStyle,
+  rangeStyle,
+  thumbStyle,
 }: SliderControlProps) {
   return (
     <div className="space-y-2">
@@ -52,10 +58,19 @@ export function SliderControl({
         )}
         style={style}
       >
-        <SliderPrimitive.Track className="relative h-1.5 w-full grow overflow-hidden rounded-full bg-muted">
-          <SliderPrimitive.Range className="absolute h-full bg-primary" />
+        <SliderPrimitive.Track
+          className="relative h-1.5 w-full grow overflow-hidden rounded-sm bg-muted"
+          style={trackStyle}
+        >
+          <SliderPrimitive.Range
+            className="absolute h-full bg-primary"
+            style={rangeStyle}
+          />
         </SliderPrimitive.Track>
-        <SliderPrimitive.Thumb className="block h-4 w-4 rounded-full border border-primary/50 bg-background shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none" />
+        <SliderPrimitive.Thumb
+          className="block h-4 w-4 rounded-sm border border-primary/50 bg-background shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none"
+          style={thumbStyle}
+        />
       </SliderPrimitive.Root>
     </div>
   );
