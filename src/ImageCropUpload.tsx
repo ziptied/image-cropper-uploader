@@ -2,11 +2,19 @@ import * as React from "react";
 import { createPortal } from "react-dom";
 
 import { CropOverlay } from "./CropOverlay";
+import { SliderControl } from "./components/SliderControl";
 import CheckUnderline from "./icons/check-underline";
+import ImageScale from "./icons/image-scale";
 import RotateObjClockwise from "./icons/rotate-obj-clockwise";
 import ShareLeft4 from "./icons/share-left-4";
+import Upload4 from "./icons/upload-4";
 import Xmark from "./icons/xmark";
-import type { ImageCropUploadProps, Template } from "./types";
+import type {
+  ImageCropUploadAppearance,
+  ImageCropUploadProps,
+  SliderRenderContext,
+  Template,
+} from "./types";
 import { clamp } from "./utils/clamp";
 import { cn } from "./utils/cn";
 import { computeCropFrame, getTemplateAspect } from "./utils/cropFrame";
@@ -14,8 +22,35 @@ import { type DecodedImage, decodeImage } from "./utils/decodeImage";
 import { exportCroppedWebP } from "./utils/exportCroppedWebP";
 import { renderViewportCanvas } from "./utils/renderViewportCanvas";
 
+type ResolvedAppearance = Required<
+  Omit<
+    ImageCropUploadAppearance,
+    | "confirmButtonClassName"
+    | "confirmButtonStyle"
+    | "sliderClassName"
+    | "sliderStyle"
+    | "sliderTrackColor"
+    | "sliderRangeColor"
+    | "sliderThumbColor"
+    | "sliderThumbBorderColor"
+    | "sliderThumbRadius"
+    | "modalBackground"
+  >
+> & {
+  confirmButtonClassName?: string;
+  confirmButtonStyle?: React.CSSProperties;
+  sliderClassName?: string;
+  sliderStyle?: React.CSSProperties;
+  sliderTrackColor?: string;
+  sliderRangeColor?: string;
+  sliderThumbColor?: string;
+  sliderThumbBorderColor?: string;
+  sliderThumbRadius?: React.CSSProperties["borderRadius"];
+  modalBackground?: string;
+};
+
 function getDefaultLabel() {
-  return "Drop image here or click to browse";
+  return "Choose a file to upload";
 }
 
 function formatBytes(bytes: number) {
@@ -115,6 +150,9 @@ export function ImageCropUpload({
   className,
   allowTemplateSwitch = false,
   templatePresets,
+  appearance,
+  renderZoomControl,
+  renderRotationControl,
 }: ImageCropUploadProps) {
   const inputRef = React.useRef<HTMLInputElement | null>(null);
   const viewportRef = React.useRef<HTMLDivElement | null>(null);
@@ -225,14 +263,14 @@ export function ImageCropUpload({
    * - `pan` is the screen-space offset of the image center from the viewport center.
    * - If zoom changes from z -> z', the required pan becomes `pan * (z'/z)`.
    */
-  function setZoomAnchored(nextZoom: number) {
+  const setZoomAnchored = React.useCallback((nextZoom: number) => {
     setZoom((prevZoom) => {
       if (prevZoom <= 0) return nextZoom;
       const ratio = nextZoom / prevZoom;
       setPan((p) => ({ x: p.x * ratio, y: p.y * ratio }));
       return nextZoom;
     });
-  }
+  }, []);
 
   async function loadFile(file: File) {
     setErrorMessage(null);
@@ -426,8 +464,228 @@ export function ImageCropUpload({
 
   const canEditInitial = Boolean(initialImageUrl) && !disabled;
 
+  const sizeHint =
+    maxBytes != null
+      ? `PNG, JPG up to ${formatBytes(maxBytes)}`
+      : "PNG, JPG, WebP up to 10MB";
+
+  const resolvedAppearance = React.useMemo<ResolvedAppearance>(() => {
+    const base: ResolvedAppearance = {
+      dropzoneBackground:
+        appearance?.dropzoneBackground ?? "hsl(var(--accent)/0.08)",
+      dropzoneBackgroundActive:
+        appearance?.dropzoneBackgroundActive ?? "hsl(var(--accent)/0.16)",
+      dropzoneBorder: appearance?.dropzoneBorder ?? "hsl(var(--accent)/0.4)",
+      dropzoneBorderActive:
+        appearance?.dropzoneBorderActive ?? "hsl(var(--accent)/0.8)",
+      iconBackground: appearance?.iconBackground ?? "hsl(var(--accent)/0.16)",
+      iconColor: appearance?.iconColor ?? "hsl(var(--accent))",
+      dialogScrimColor: appearance?.dialogScrimColor ?? "rgba(0,0,0,0.6)",
+      closeButtonColor:
+        appearance?.closeButtonColor ?? "hsl(var(--muted-foreground))",
+      closeButtonHoverColor:
+        appearance?.closeButtonHoverColor ?? "hsl(var(--foreground))",
+      toolbarButtonBackground:
+        appearance?.toolbarButtonBackground ?? "rgba(0,0,0,0.35)",
+      toolbarButtonBorder:
+        appearance?.toolbarButtonBorder ?? "rgba(255,255,255,0.5)",
+      toolbarButtonColor: appearance?.toolbarButtonColor ?? "#fff",
+      sliderTrackColor: appearance?.sliderTrackColor ?? "hsl(var(--muted))",
+      sliderRangeColor: appearance?.sliderRangeColor ?? "hsl(var(--accent))",
+      sliderThumbColor:
+        appearance?.sliderThumbColor ?? "hsl(var(--background))",
+      sliderThumbBorderColor:
+        appearance?.sliderThumbBorderColor ??
+        "color-mix(in srgb, hsl(var(--accent)) 55%, transparent)",
+      sliderThumbRadius:
+        appearance?.sliderThumbRadius ?? "var(--radius-sm, 0.25rem)",
+    };
+    if (appearance?.confirmButtonClassName !== undefined) {
+      base.confirmButtonClassName = appearance.confirmButtonClassName;
+    }
+    if (appearance?.confirmButtonStyle !== undefined) {
+      base.confirmButtonStyle = appearance.confirmButtonStyle;
+    }
+    if (appearance?.sliderClassName !== undefined) {
+      base.sliderClassName = appearance.sliderClassName;
+    }
+    if (appearance?.sliderStyle !== undefined) {
+      base.sliderStyle = appearance.sliderStyle;
+    }
+    if (appearance?.modalBackground !== undefined) {
+      base.modalBackground = appearance.modalBackground;
+    }
+    return base;
+  }, [appearance]);
+
+  const circleIconClasses =
+    "flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-transparent text-current transition-colors aspect-square";
+
+  const sliderClassNames = React.useMemo(
+    () =>
+      cn(
+        "w-full appearance-none bg-transparent focus-visible:outline-none",
+        resolvedAppearance.sliderClassName,
+      ),
+    [resolvedAppearance.sliderClassName],
+  );
+
+  const sliderInlineStyle = React.useMemo<React.CSSProperties>(() => {
+    if (resolvedAppearance.sliderStyle) {
+      return {
+        accentColor: "hsl(var(--accent))",
+        ...resolvedAppearance.sliderStyle,
+      };
+    }
+    return { accentColor: "hsl(var(--accent))" };
+  }, [resolvedAppearance.sliderStyle]);
+
+  const sliderTrackStyle = React.useMemo<React.CSSProperties>(
+    () => ({
+      backgroundColor: resolvedAppearance.sliderTrackColor,
+      borderRadius: "var(--radius-sm, 0.25rem)",
+    }),
+    [resolvedAppearance.sliderTrackColor],
+  );
+
+  const sliderRangeStyle = React.useMemo<React.CSSProperties>(
+    () => ({
+      backgroundColor: resolvedAppearance.sliderRangeColor,
+    }),
+    [resolvedAppearance.sliderRangeColor],
+  );
+
+  const sliderThumbStyle = React.useMemo<React.CSSProperties>(
+    () => ({
+      backgroundColor: resolvedAppearance.sliderThumbColor,
+      borderColor: resolvedAppearance.sliderThumbBorderColor,
+      borderRadius: resolvedAppearance.sliderThumbRadius,
+    }),
+    [
+      resolvedAppearance.sliderThumbBorderColor,
+      resolvedAppearance.sliderThumbColor,
+      resolvedAppearance.sliderThumbRadius,
+    ],
+  );
+
+  const zoomRenderContext = React.useMemo<SliderRenderContext>(
+    () => ({
+      value: zoom,
+      min: 1,
+      max: 5,
+      step: 0.01,
+      disabled: processing,
+      id: "zoom",
+      label: "Zoom",
+      className: sliderClassNames,
+      style: sliderInlineStyle,
+      trackStyle: sliderTrackStyle,
+      rangeStyle: sliderRangeStyle,
+      thumbStyle: sliderThumbStyle,
+      onChange: (value) => setZoomAnchored(value),
+    }),
+    [
+      processing,
+      sliderClassNames,
+      sliderInlineStyle,
+      sliderTrackStyle,
+      sliderRangeStyle,
+      sliderThumbStyle,
+      zoom,
+      setZoomAnchored,
+    ],
+  );
+
+  const rotationRenderContext = React.useMemo<SliderRenderContext>(
+    () => ({
+      value: rotation,
+      min: -180,
+      max: 180,
+      step: 1,
+      disabled: processing,
+      id: "rotation",
+      label: "Rotation",
+      className: sliderClassNames,
+      style: sliderInlineStyle,
+      trackStyle: sliderTrackStyle,
+      rangeStyle: sliderRangeStyle,
+      thumbStyle: sliderThumbStyle,
+      onChange: (value) => setRotation(value),
+    }),
+    [
+      processing,
+      rotation,
+      sliderClassNames,
+      sliderInlineStyle,
+      sliderTrackStyle,
+      sliderRangeStyle,
+      sliderThumbStyle,
+    ],
+  );
+
+  const dropzoneStyle = React.useMemo<React.CSSProperties>(() => {
+    return dragActive
+      ? {
+          backgroundColor: resolvedAppearance.dropzoneBackgroundActive,
+          borderColor: resolvedAppearance.dropzoneBorderActive,
+        }
+      : {
+          backgroundColor: resolvedAppearance.dropzoneBackground,
+          borderColor: resolvedAppearance.dropzoneBorder,
+        };
+  }, [
+    dragActive,
+    resolvedAppearance.dropzoneBackground,
+    resolvedAppearance.dropzoneBackgroundActive,
+    resolvedAppearance.dropzoneBorder,
+    resolvedAppearance.dropzoneBorderActive,
+  ]);
+
+  const iconStyle = React.useMemo<React.CSSProperties>(
+    () => ({
+      backgroundColor: resolvedAppearance.iconBackground,
+      color: resolvedAppearance.iconColor,
+    }),
+    [resolvedAppearance.iconBackground, resolvedAppearance.iconColor],
+  );
+
+  const toolbarButtonStyle = React.useMemo<React.CSSProperties>(
+    () => ({
+      backgroundColor: resolvedAppearance.toolbarButtonBackground,
+      borderColor: resolvedAppearance.toolbarButtonBorder,
+      color: resolvedAppearance.toolbarButtonColor,
+    }),
+    [
+      resolvedAppearance.toolbarButtonBackground,
+      resolvedAppearance.toolbarButtonBorder,
+      resolvedAppearance.toolbarButtonColor,
+    ],
+  );
+
+  const closeButtonColors = React.useMemo(
+    () => ({
+      base: resolvedAppearance.closeButtonColor,
+      hover:
+        resolvedAppearance.closeButtonHoverColor ??
+        resolvedAppearance.closeButtonColor,
+    }),
+    [
+      resolvedAppearance.closeButtonColor,
+      resolvedAppearance.closeButtonHoverColor,
+    ],
+  );
+
+  const confirmButtonClassName = React.useMemo(
+    () =>
+      cn(
+        "inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50",
+        resolvedAppearance.confirmButtonClassName,
+      ),
+    [resolvedAppearance.confirmButtonClassName],
+  );
+
   return (
-    <div className={cn("w-full", className)}>
+    <div className={cn("flex h-full w-full flex-col gap-3", className)}>
       <input
         ref={inputRef}
         type="file"
@@ -444,39 +702,75 @@ export function ImageCropUpload({
 
       <button
         type="button"
+        disabled={disabled}
         className={cn(
-          "relative flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed p-6 text-center",
-          "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-          dragActive && "border-primary bg-muted/30",
+          "group relative flex min-h-[260px] w-full flex-1 cursor-pointer flex-col items-center justify-center gap-5 rounded-2xl border border-dashed",
+          "bg-transparent p-8 text-center backdrop-blur transition-all",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
           disabled && "cursor-not-allowed opacity-60",
         )}
-        disabled={disabled}
+        style={dropzoneStyle}
         onClick={() => {
+          if (disabled) return;
           openFilePicker();
         }}
         onDragEnter={(e) => {
           e.preventDefault();
+          if (disabled) return;
           setDragActive(true);
         }}
         onDragOver={(e) => {
           e.preventDefault();
+          if (disabled) return;
           setDragActive(true);
         }}
         onDragLeave={(e) => {
           e.preventDefault();
+          if (disabled) return;
           setDragActive(false);
         }}
         onDrop={(e) => {
           e.preventDefault();
+          if (disabled) return;
           setDragActive(false);
           const file = e.dataTransfer.files?.[0];
           if (!file) return;
           void loadFile(file);
         }}
       >
-        <div className="text-sm font-medium">{label}</div>
-        <div className="text-xs text-muted-foreground">
-          {maxBytes != null ? `Max size: ${formatBytes(maxBytes)}.` : " "}
+        <div className="flex items-center justify-center gap-3">
+          <div
+            className={cn(circleIconClasses, "group-hover:brightness-110")}
+            style={iconStyle}
+          >
+            <Upload4 aria-hidden="true" className="h-7 w-7" />
+          </div>
+          {canEditInitial ? (
+            <button
+              type="button"
+              aria-label="Edit existing image"
+              className={cn(
+                circleIconClasses,
+                "hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+              )}
+              style={iconStyle}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!initialImageUrl) return;
+                void loadInitialUrl(initialImageUrl);
+              }}
+            >
+              <ImageScale aria-hidden="true" className="h-6 w-6" />
+            </button>
+          ) : null}
+        </div>
+
+        <div className="space-y-1">
+          <div className="text-lg font-semibold text-primary">{label}</div>
+          <div className="text-sm text-muted-foreground">{sizeHint}</div>
+          <div className="text-xs text-muted-foreground/80">
+            or drag and drop
+          </div>
         </div>
       </button>
 
@@ -484,27 +778,17 @@ export function ImageCropUpload({
         <div className="mt-2 text-sm text-destructive">{errorMessage}</div>
       ) : null}
 
-      {canEditInitial ? (
-        <button
-          type="button"
-          className="mt-2 rounded-md border px-3 py-2 text-sm hover:bg-muted disabled:opacity-50"
-          disabled={disabled}
-          onClick={() => {
-            if (!initialImageUrl) return;
-            void loadInitialUrl(initialImageUrl);
-          }}
-        >
-          Edit existing image
-        </button>
-      ) : null}
-
       {editorOpen
         ? createPortal(
-            <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div
+              className="fixed inset-0 flex items-center justify-center"
+              style={{ zIndex: 500 }}
+            >
               <button
                 type="button"
                 aria-label="Close"
-                className="absolute inset-0 bg-black/60"
+                className="absolute inset-0"
+                style={{ backgroundColor: resolvedAppearance.dialogScrimColor }}
                 disabled={processing}
                 tabIndex={-1}
                 onClick={() => {
@@ -521,6 +805,11 @@ export function ImageCropUpload({
                   "relative z-10 w-[min(92vw,760px)] rounded-xl border bg-background p-4 shadow-lg",
                   "focus-visible:outline-none",
                 )}
+                style={
+                  resolvedAppearance.modalBackground
+                    ? { backgroundColor: resolvedAppearance.modalBackground }
+                    : undefined
+                }
                 open
                 onCancel={(e) => {
                   e.preventDefault();
@@ -534,12 +823,18 @@ export function ImageCropUpload({
                   title="Close"
                   className={cn(
                     "pointer-events-auto absolute right-3 top-3 z-50 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border bg-background/80",
-                    // Default: primary-ish if available, otherwise a readable gray.
-                    "border-transparent text-zinc-400 [color:hsl(var(--primary)/0.7)] hover:text-zinc-700",
+                    "border-transparent text-current hover:opacity-80",
                     "hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                     "disabled:pointer-events-none disabled:opacity-50",
                   )}
                   disabled={processing}
+                  style={{ color: closeButtonColors.base }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = closeButtonColors.hover;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = closeButtonColors.base;
+                  }}
                   onPointerDown={(e) => {
                     e.stopPropagation();
                   }}
@@ -647,18 +942,19 @@ export function ImageCropUpload({
                       viewport={viewportSize}
                     />
 
-                    <div className="pointer-events-auto absolute right-2 top-2 z-50 flex flex-col gap-2">
+                    <div className="pointer-events-auto absolute right-2 top-4 z-50 flex flex-col gap-2">
                       <button
                         type="button"
                         aria-label="Reset"
                         title="Reset"
                         // Keep this above the overlay and canvas so it's always clickable.
                         className={cn(
-                          "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border bg-background/80",
-                          "border-white/50 bg-black/35 text-white backdrop-blur hover:bg-white/80 hover:text-black hover:border-white/80",
+                          "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border text-current backdrop-blur transition-colors",
+                          "hover:brightness-110",
                           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                           "disabled:pointer-events-none disabled:opacity-50",
                         )}
+                        style={toolbarButtonStyle}
                         disabled={processing}
                         onPointerDown={(e) => {
                           // Prevent the viewport's panning handler from capturing the pointer.
@@ -681,11 +977,12 @@ export function ImageCropUpload({
                         aria-label="Rotate 90° clockwise"
                         title="Rotate 90° clockwise"
                         className={cn(
-                          "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border bg-background/80",
-                          "border-white/50 bg-black/35 text-white backdrop-blur hover:bg-white/80 hover:text-black hover:border-white/80",
+                          "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border text-current backdrop-blur transition-colors",
+                          "hover:brightness-110",
                           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                           "disabled:pointer-events-none disabled:opacity-50",
                         )}
+                        style={toolbarButtonStyle}
                         disabled={processing}
                         onPointerDown={(e) => {
                           e.stopPropagation();
@@ -706,41 +1003,19 @@ export function ImageCropUpload({
 
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium" htmlFor="zoom">
-                        Zoom
-                      </label>
-                      <input
-                        id="zoom"
-                        aria-label="Zoom"
-                        type="range"
-                        min={1}
-                        max={5}
-                        step={0.01}
-                        value={zoom}
-                        disabled={processing}
-                        onChange={(e) =>
-                          setZoomAnchored(Number(e.target.value))
-                        }
-                        className="w-full"
-                      />
+                      {renderZoomControl ? (
+                        renderZoomControl(zoomRenderContext)
+                      ) : (
+                        <SliderControl {...zoomRenderContext} />
+                      )}
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-sm font-medium" htmlFor="rotation">
-                        Rotation
-                      </label>
-                      <input
-                        id="rotation"
-                        aria-label="Rotation"
-                        type="range"
-                        min={-180}
-                        max={180}
-                        step={1}
-                        value={rotation}
-                        disabled={processing}
-                        onChange={(e) => setRotation(Number(e.target.value))}
-                        className="w-full"
-                      />
+                      {renderRotationControl ? (
+                        renderRotationControl(rotationRenderContext)
+                      ) : (
+                        <SliderControl {...rotationRenderContext} />
+                      )}
                     </div>
                   </div>
                 </div>
@@ -748,7 +1023,8 @@ export function ImageCropUpload({
                 <div className="mt-4 flex items-center justify-end gap-2">
                   <button
                     type="button"
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                    className={confirmButtonClassName}
+                    style={resolvedAppearance.confirmButtonStyle}
                     disabled={processing}
                     onClick={() => void onConfirm()}
                   >

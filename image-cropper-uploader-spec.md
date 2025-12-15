@@ -530,7 +530,17 @@ Transitions:
 
 ---
 
-## 19. Notes for Implementation Handoff
+## 19. Customization / Appearance API
+- Empty state uses shadcn/baseui tokens (accent) by default.
+- Consumers can override via `appearance?: { dropzoneBackground?, dropzoneBackgroundActive?, dropzoneBorder?, dropzoneBorderActive?, iconBackground?, iconColor?, dialogScrimColor?, closeButtonColor?, closeButtonHoverColor?, toolbarButtonBackground?, toolbarButtonBorder?, toolbarButtonColor?, confirmButtonClassName?, confirmButtonStyle?, sliderClassName?, sliderStyle?, modalBackground? }`.
+- Each color property accepts any CSS color (hex, rgb, hsl, CSS var string). Unset keys use the defaults above.
+- `confirmButtonClassName` is appended to the default OK button classes; `confirmButtonStyle` is applied inline.
+- Range inputs have `appearance: none;` applied so integrators can style `::-webkit-slider-thumb` / `::-moz-range-thumb` via the `sliderClassName`.
+- For full custom sliders, use `renderZoomControl` / `renderRotationControl`; each render prop receives `{ value, min, max, step, disabled, id, label, onChange }`.
+
+---
+
+## 20. Notes for Implementation Handoff
 - The simplest, most reliable exporter is the **viewport-canvas render** approach.
 - Keep transforms consistent:
   - the same baseScale math used in UI must be used in viewportCanvas render.

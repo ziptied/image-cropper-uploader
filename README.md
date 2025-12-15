@@ -102,6 +102,59 @@ Common templates:
 - `disabled`, `className`: standard UI controls.
 - `allowTemplateSwitch`: lets users choose templates in the modal.
 - `templatePresets`: template list used when `allowTemplateSwitch` is enabled.
+- `appearance`: optional object for overriding default colors (see below).
+- `renderZoomControl`: optional render prop for replacing the built-in zoom slider.
+- `renderRotationControl`: optional render prop for replacing the built-in rotation slider.
+
+### Customization & Theming
+
+The component is designed to pick up shared shadcn/baseui tokens out of the box.  
+By default the drop zone and icons use `--accent` for tone and `--muted-foreground` for text.
+
+If you need tighter control, pass the `appearance` prop. All fields are optional:
+
+| Key | Description | Default |
+| --- | ----------- | ------- |
+| `dropzoneBackground` | Idle background color for the dashed area. | `hsl(var(--accent)/0.08)` |
+| `dropzoneBackgroundActive` | Background while a file is dragged over. | `hsl(var(--accent)/0.16)` |
+| `dropzoneBorder` | Idle dashed border color. | `hsl(var(--accent)/0.4)` |
+| `dropzoneBorderActive` | Border color while dragging. | `hsl(var(--accent)/0.8)` |
+| `iconBackground` | Circle background behind the upload/edit glyphs. | `hsl(var(--accent)/0.16)` |
+| `iconColor` | Icon foreground color. | `hsl(var(--accent))` |
+| `dialogScrimColor` | Modal scrim color. | `rgba(0,0,0,0.6)` |
+| `closeButtonColor` | Close button foreground. | `hsl(var(--muted-foreground))` |
+| `closeButtonHoverColor` | Close button hover color. | `hsl(var(--foreground))` |
+| `toolbarButtonBackground` | Reset/Rotate background. | `rgba(0,0,0,0.35)` |
+| `toolbarButtonBorder` | Reset/Rotate border color. | `rgba(255,255,255,0.5)` |
+| `toolbarButtonColor` | Reset/Rotate icon color. | `#fff` |
+| `confirmButtonClassName` | Extra classes appended to the OK button. | `""` |
+| `confirmButtonStyle` | Inline style object for the OK button. | `undefined` |
+| `sliderClassName` | Extra classes applied to both zoom/rotation sliders. | `""` |
+| `sliderStyle` | Inline slider styles (apply at the Radix root). | `undefined` |
+| `sliderTrackColor` | Background color of the slider track. | `hsl(var(--muted))` |
+| `sliderRangeColor` | Foreground (filled) portion color. | `hsl(var(--accent))` |
+| `sliderThumbColor` | Thumb fill color. | `hsl(var(--background))` |
+| `sliderThumbBorderColor` | Thumb border color. | `color-mix(in srgb, hsl(var(--accent)) 55%, transparent)` |
+| `sliderThumbRadius` | Thumb corner radius (defaults to `rounded-sm`). | `var(--radius-sm, 0.25rem)` |
+| `modalBackground` | Dialog background fill (overrides `bg-background`). | `undefined` |
+
+Example:
+
+```tsx
+<ImageCropUpload
+  template={avatarTemplate}
+  appearance={{
+    dropzoneBackground: "rgba(15, 23, 42, 0.04)",
+    dropzoneBorder: "rgba(15, 23, 42, 0.35)",
+    iconBackground: "rgba(15, 23, 42, 0.08)",
+    iconColor: "rgb(15, 23, 42)",
+  }}
+/>
+```
+
+This pattern mirrors other design systems (Radix, shadcn/ui, BaseUI): we rely on the shared palette by default, but expose a small override surface so consumers (and automation/LLMs) can align the component with any design system without forking.  
+`confirmButtonClassName` is appended to the default OK button classes, so you can keep the base layout but inject your own tone/variant. `confirmButtonStyle` is applied directly via inline styles for theming systems that prefer CSS variables.  
+Slider controls now use Radix Slider primitives; `sliderClassName` / `sliderStyle` target the root, while the new `sliderTrackColor`, `sliderRangeColor`, `sliderThumbColor`, `sliderThumbBorderColor`, and `sliderThumbRadius` tokens handle the built-in visual treatment (track fill, active range, thumb shape). Need a bespoke slider? Provide `renderZoomControl={(ctx) => <YourSlider value={ctx.value} onValueChange={ctx.onChange} …/>}` and/or `renderRotationControl`. Each render prop receives `{ value, min, max, step, disabled, id, label, onChange, className, style }`.
 
 ### Styling Notes
 
@@ -113,6 +166,7 @@ This package uses Tailwind utility classes (shadcn-like). Your app should alread
 
 Key facts:
 - This package exports **one main component**: `ImageCropUpload`, and types like `Template`.
+- Optional `appearance` prop controls the empty state, modal scrim, toolbar buttons, and OK button without forking.
 - This package **does not ship preset constants** like `avatarTemplate` / `logoTemplate`. Those live in the consuming app.
 - If you are changing crop behavior, you almost always only need to change the `template={...}` object at the `ImageCropUpload` call site.
 - Do not search `node_modules/@ziptied/image-crop-upload` for `avatarTemplate` (it won’t exist).
@@ -122,7 +176,9 @@ Recommended instruction format to an LLM (consumer app):
 1) Find the `ImageCropUpload` usage for the target field (e.g. “logo image”).  
 2) Add/update a local `const avatarTemplate: Template = { shape: "circle", output: { width: 512, height: 512 }, viewport: { width: 360, height: 360 }, circleAlphaOutput: false }`.  
 3) Replace `template={logoUploadTemplate}` with `template={avatarTemplate}`.  
-4) Don’t modify this package unless the behavior is missing/buggy.
+4) Need branded drop zone / scrim / OK button? Pass `appearance={{ dropzoneBackground: "hsl(var(--primary)/0.1)", dialogScrimColor: "rgba(9,9,11,0.7)", confirmButtonClassName: "bg-emerald-600 hover:bg-emerald-500" }}` (no fork required).  
+5) Need shadcn/BaseUI sliders? Use `renderZoomControl` / `renderRotationControl` to render your Radix slider and call `ctx.onChange(newValue)`.  
+6) Don’t modify this package unless the behavior is missing/buggy.
 
 ---
 
