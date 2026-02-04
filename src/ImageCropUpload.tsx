@@ -35,6 +35,10 @@ type ResolvedAppearance = Required<
     | "sliderThumbBorderColor"
     | "sliderThumbRadius"
     | "modalBackground"
+    | "titleClassName"
+    | "descriptionClassName"
+    | "closeButtonClassName"
+    | "closeButtonIconClassName"
   >
 > & {
   confirmButtonClassName?: string;
@@ -47,6 +51,10 @@ type ResolvedAppearance = Required<
   sliderThumbBorderColor?: string;
   sliderThumbRadius?: React.CSSProperties["borderRadius"];
   modalBackground?: string;
+  titleClassName?: string;
+  descriptionClassName?: string;
+  closeButtonClassName?: string;
+  closeButtonIconClassName?: string;
 };
 
 function getDefaultLabel() {
@@ -140,10 +148,12 @@ export function ImageCropUpload({
   template,
   onCropped,
   onCancel,
+  onRemove,
   validateFile,
   accept = "image/*",
   maxBytes,
   webpQuality = 0.9,
+  imageUrl,
   initialImageUrl,
   label = getDefaultLabel(),
   disabled = false,
@@ -212,14 +222,6 @@ export function ImageCropUpload({
     return () => ro.disconnect();
   }, [editorOpen]);
 
-  // If a fixed viewport is provided by the template, use it as a reliable fallback.
-  React.useEffect(() => {
-    if (!editorOpen) return;
-    const fixed = activeTemplate.viewport;
-    if (!fixed) return;
-    setViewportSize({ width: fixed.width, height: fixed.height });
-  }, [activeTemplate.viewport, editorOpen]);
-
   // Clean up decoded resources / object URLs.
   React.useEffect(() => {
     return () => decoded?.cleanup?.();
@@ -227,12 +229,14 @@ export function ImageCropUpload({
 
   useFocusTrap(editorOpen, dialogRef);
 
+  const cropFramePad = 24;
+
   const cropFrame = React.useMemo(() => {
     return computeCropFrame(
       viewportSize.width,
       viewportSize.height,
       activeTemplate,
-      24,
+      cropFramePad,
     );
   }, [viewportSize.width, viewportSize.height, activeTemplate]);
 
@@ -469,6 +473,10 @@ export function ImageCropUpload({
   }, [allowTemplateSwitch, templatePresets, template]);
 
   const canEditInitial = Boolean(initialImageUrl) && !disabled;
+  const hasPreviewImage = Boolean(imageUrl);
+  const canEditPreview = Boolean(imageUrl) && !disabled;
+  const canRemovePreview = Boolean(onRemove) && !disabled;
+  const hasPreviewActions = canEditPreview || canRemovePreview;
 
   const sizeHint =
     maxBytes != null
@@ -520,6 +528,18 @@ export function ImageCropUpload({
     }
     if (appearance?.modalBackground !== undefined) {
       base.modalBackground = appearance.modalBackground;
+    }
+    if (appearance?.titleClassName !== undefined) {
+      base.titleClassName = appearance.titleClassName;
+    }
+    if (appearance?.descriptionClassName !== undefined) {
+      base.descriptionClassName = appearance.descriptionClassName;
+    }
+    if (appearance?.closeButtonClassName !== undefined) {
+      base.closeButtonClassName = appearance.closeButtonClassName;
+    }
+    if (appearance?.closeButtonIconClassName !== undefined) {
+      base.closeButtonIconClassName = appearance.closeButtonIconClassName;
     }
     return base;
   }, [appearance]);
@@ -574,11 +594,19 @@ export function ImageCropUpload({
     ],
   );
 
+  const zoomMin = activeTemplate.fit === "contain" ? 0.25 : 1;
+  const zoomMax = 5;
+
+  React.useEffect(() => {
+    if (zoom < zoomMin) setZoomAnchored(zoomMin);
+    else if (zoom > zoomMax) setZoomAnchored(zoomMax);
+  }, [zoom, zoomMin, setZoomAnchored]);
+
   const zoomRenderContext = React.useMemo<SliderRenderContext>(
     () => ({
       value: zoom,
-      min: 1,
-      max: 5,
+      min: zoomMin,
+      max: zoomMax,
       step: 0.01,
       disabled: processing,
       id: "zoom",
@@ -598,6 +626,7 @@ export function ImageCropUpload({
       sliderRangeStyle,
       sliderThumbStyle,
       zoom,
+      zoomMin,
       setZoomAnchored,
     ],
   );
@@ -668,13 +697,14 @@ export function ImageCropUpload({
     ],
   );
 
-  const closeButtonColors = React.useMemo(
-    () => ({
-      base: resolvedAppearance.closeButtonColor,
-      hover:
-        resolvedAppearance.closeButtonHoverColor ??
-        resolvedAppearance.closeButtonColor,
-    }),
+  const closeButtonStyle = React.useMemo<React.CSSProperties>(
+    () =>
+      ({
+        "--close-button-color": resolvedAppearance.closeButtonColor,
+        "--close-button-hover-color":
+          resolvedAppearance.closeButtonHoverColor ??
+          resolvedAppearance.closeButtonColor,
+      }) as React.CSSProperties,
     [
       resolvedAppearance.closeButtonColor,
       resolvedAppearance.closeButtonHoverColor,
@@ -689,6 +719,39 @@ export function ImageCropUpload({
       ),
     [resolvedAppearance.confirmButtonClassName],
   );
+
+  const viewportStyle = React.useMemo<React.CSSProperties>(() => {
+    const base: React.CSSProperties = {
+      width: "100%",
+      touchAction: "none",
+    };
+
+    if (activeTemplate.viewport) {
+      return {
+        ...base,
+        maxWidth: activeTemplate.viewport.width,
+        height: activeTemplate.viewport.height,
+        maxHeight: activeTemplate.viewport.height,
+      };
+    }
+
+    if (activeTemplate.shape === "rect") {
+      const aspect = Math.max(0.01, getTemplateAspect(activeTemplate));
+      const measuredWidth = viewportSize.width > 0 ? viewportSize.width : 560;
+      const height = Math.round(measuredWidth / aspect + cropFramePad * 2);
+      return {
+        ...base,
+        maxWidth: "560px",
+        height,
+      };
+    }
+
+    return {
+      ...base,
+      maxWidth: "560px",
+      height: "min(60vh, 420px)",
+    };
+  }, [activeTemplate, viewportSize.width]);
 
   return (
     <div className={cn("flex h-full w-full flex-col gap-3", className)}>
@@ -706,19 +769,29 @@ export function ImageCropUpload({
         }}
       />
 
-      <button
-        type="button"
-        disabled={disabled}
+      <div
+        role={hasPreviewImage ? undefined : "button"}
+        tabIndex={hasPreviewImage || disabled ? undefined : 0}
+        aria-disabled={disabled || undefined}
         className={cn(
           "group relative flex min-h-[260px] w-full flex-1 cursor-pointer flex-col items-center justify-center gap-5 rounded-2xl border border-dashed",
           "bg-transparent p-8 text-center backdrop-blur transition-all",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+          hasPreviewImage && "gap-0 p-0 text-left items-stretch justify-start",
           disabled && "cursor-not-allowed opacity-60",
         )}
         style={dropzoneStyle}
         onClick={() => {
           if (disabled) return;
+          if (hasPreviewImage) return;
           openFilePicker();
+        }}
+        onKeyDown={(e) => {
+          if (hasPreviewImage || disabled) return;
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            openFilePicker();
+          }
         }}
         onDragEnter={(e) => {
           e.preventDefault();
@@ -744,41 +817,96 @@ export function ImageCropUpload({
           void loadFile(file);
         }}
       >
-        <div className="flex items-center justify-center gap-3">
-          <div
-            className={cn(circleIconClasses, "group-hover:brightness-110")}
-            style={iconStyle}
-          >
-            <Upload4 aria-hidden="true" className="h-7 w-7" />
+        {hasPreviewImage ? (
+          <div className="relative min-h-[260px] w-full overflow-hidden rounded-2xl">
+            <img
+              src={imageUrl}
+              alt="Uploaded preview"
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+            {hasPreviewActions ? (
+              <>
+                <div className="pointer-events-none absolute inset-0 rounded-2xl bg-black/40 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100" />
+                <div className="absolute inset-0 flex items-center justify-center gap-3 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+                  {canRemovePreview ? (
+                    <button
+                      type="button"
+                      aria-label="Remove image"
+                      className={cn(
+                        "inline-flex items-center gap-2 rounded-full border border-transparent bg-background/90 px-4 py-2 text-sm font-medium text-foreground shadow-sm",
+                        "hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                      )}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setErrorMessage(null);
+                        onRemove?.();
+                      }}
+                    >
+                      <Xmark aria-hidden="true" className="h-4 w-4" />
+                      Remove
+                    </button>
+                  ) : null}
+                  {canEditPreview ? (
+                    <button
+                      type="button"
+                      aria-label="Edit image"
+                      className={cn(
+                        "inline-flex items-center gap-2 rounded-full border border-transparent bg-background/90 px-4 py-2 text-sm font-medium text-foreground shadow-sm",
+                        "hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                      )}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!imageUrl) return;
+                        void loadInitialUrl(imageUrl);
+                      }}
+                    >
+                      <ImageScale aria-hidden="true" className="h-4 w-4" />
+                      Edit
+                    </button>
+                  ) : null}
+                </div>
+              </>
+            ) : null}
           </div>
-          {canEditInitial ? (
-            <button
-              type="button"
-              aria-label="Edit existing image"
-              className={cn(
-                circleIconClasses,
-                "hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-              )}
-              style={iconStyle}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (!initialImageUrl) return;
-                void loadInitialUrl(initialImageUrl);
-              }}
-            >
-              <ImageScale aria-hidden="true" className="h-6 w-6" />
-            </button>
-          ) : null}
-        </div>
+        ) : (
+          <>
+            <div className="flex items-center justify-center gap-3">
+              <div
+                className={cn(circleIconClasses, "group-hover:brightness-110")}
+                style={iconStyle}
+              >
+                <Upload4 aria-hidden="true" className="h-7 w-7" />
+              </div>
+              {canEditInitial ? (
+                <button
+                  type="button"
+                  aria-label="Edit existing image"
+                  className={cn(
+                    circleIconClasses,
+                    "hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                  )}
+                  style={iconStyle}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!initialImageUrl) return;
+                    void loadInitialUrl(initialImageUrl);
+                  }}
+                >
+                  <ImageScale aria-hidden="true" className="h-6 w-6" />
+                </button>
+              ) : null}
+            </div>
 
-        <div className="space-y-1">
-          <div className="text-lg font-semibold text-primary">{label}</div>
-          <div className="text-sm text-muted-foreground">{sizeHint}</div>
-          <div className="text-xs text-muted-foreground/80">
-            or drag and drop
-          </div>
-        </div>
-      </button>
+            <div className="space-y-1">
+              <div className="text-lg font-semibold text-primary">{label}</div>
+              <div className="text-sm text-muted-foreground">{sizeHint}</div>
+              <div className="text-xs text-muted-foreground/80">
+                or drag and drop
+              </div>
+            </div>
+          </>
+        )}
+      </div>
 
       {errorMessage ? (
         <div className="mt-2 text-sm text-destructive">{errorMessage}</div>
@@ -829,18 +957,13 @@ export function ImageCropUpload({
                   title="Close"
                   className={cn(
                     "pointer-events-auto absolute right-3 top-3 z-50 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border bg-background/80",
-                    "border-transparent text-current hover:opacity-80",
+                    "border-transparent text-[var(--close-button-color)] hover:text-[var(--close-button-hover-color)] hover:opacity-80",
                     "hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                     "disabled:pointer-events-none disabled:opacity-50",
+                    resolvedAppearance.closeButtonClassName,
                   )}
                   disabled={processing}
-                  style={{ color: closeButtonColors.base }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.color = closeButtonColors.hover;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.color = closeButtonColors.base;
-                  }}
+                  style={closeButtonStyle}
                   onPointerDown={(e) => {
                     e.stopPropagation();
                   }}
@@ -849,19 +972,31 @@ export function ImageCropUpload({
                     closeEditor("cancel");
                   }}
                 >
-                  <Xmark aria-hidden="true" className="h-4 w-4" />
+                  <Xmark
+                    aria-hidden="true"
+                    className={cn(
+                      "h-4 w-4",
+                      resolvedAppearance.closeButtonIconClassName,
+                    )}
+                  />
                 </button>
 
                 <div className="mb-3 space-y-1">
                   <div
                     id="image-crop-title"
-                    className="text-base font-semibold"
+                    className={cn(
+                      "text-base font-semibold",
+                      resolvedAppearance.titleClassName,
+                    )}
                   >
                     Adjust Image
                   </div>
                   <div
                     id="image-crop-description"
-                    className="text-sm text-muted-foreground"
+                    className={cn(
+                      "text-sm text-muted-foreground",
+                      resolvedAppearance.descriptionClassName,
+                    )}
                   >
                     Drag to reposition. Use sliders to zoom and rotate.
                   </div>
@@ -899,7 +1034,7 @@ export function ImageCropUpload({
                   </div>
                 ) : null}
 
-                <div className="grid gap-4 md:grid-cols-[1fr_260px]">
+                <div className="grid gap-4">
                   <div
                     ref={viewportRef}
                     className={cn(
@@ -913,19 +1048,7 @@ export function ImageCropUpload({
                     // Required to stop scroll/zoom conflicts on touch devices while panning.
                     // (This is why we use Pointer Events instead of mouse/touch separately.)
                     onContextMenu={(e) => e.preventDefault()}
-                    style={{
-                      ...(activeTemplate.viewport
-                        ? {
-                            width: activeTemplate.viewport.width,
-                            height: activeTemplate.viewport.height,
-                          }
-                        : {
-                            width: "100%",
-                            maxWidth: "560px",
-                            height: "min(60vh, 420px)",
-                          }),
-                      touchAction: "none",
-                    }}
+                    style={viewportStyle}
                   >
                     <div
                       className={cn(

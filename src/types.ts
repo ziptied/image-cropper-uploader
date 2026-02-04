@@ -50,6 +50,8 @@ export type ImageCropUploadAppearance = {
   dialogScrimColor?: string;
   closeButtonColor?: string;
   closeButtonHoverColor?: string;
+  closeButtonClassName?: string;
+  closeButtonIconClassName?: string;
   toolbarButtonBackground?: string;
   toolbarButtonBorder?: string;
   toolbarButtonColor?: string;
@@ -63,6 +65,8 @@ export type ImageCropUploadAppearance = {
   sliderThumbBorderColor?: string;
   sliderThumbRadius?: CSSProperties["borderRadius"];
   modalBackground?: string;
+  titleClassName?: string;
+  descriptionClassName?: string;
 };
 
 export type SliderRenderContext = {
@@ -85,10 +89,12 @@ export type ImageCropUploadProps = {
   template: Template;
   onCropped: (result: ImageCropUploadResult) => void | Promise<void>;
   onCancel?: () => void;
+  onRemove?: () => void;
   validateFile?: (file: File) => { ok: true } | { ok: false; reason: string };
   accept?: string;
   maxBytes?: number;
   webpQuality?: number;
+  imageUrl?: string;
   initialImageUrl?: string;
   label?: string;
   disabled?: boolean;
