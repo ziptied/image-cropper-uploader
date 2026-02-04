@@ -121,6 +121,8 @@ Common templates:
 - `appearance`: optional object for overriding default colors (see below).
 - `renderZoomControl`: optional render prop for replacing the built-in zoom slider.
 - `renderRotationControl`: optional render prop for replacing the built-in rotation slider.
+- `imageUrl`: optional preview image URL that replaces the empty dropzone.
+- `onRemove`: optional handler fired when the user clicks “Remove” on the preview.
 
 ### Customization & Theming
 
@@ -140,6 +142,8 @@ If you need tighter control, pass the `appearance` prop. All fields are optional
 | `dialogScrimColor` | Modal scrim color. | `rgba(0,0,0,0.6)` |
 | `closeButtonColor` | Close button foreground. | `hsl(var(--muted-foreground))` |
 | `closeButtonHoverColor` | Close button hover color. | `hsl(var(--foreground))` |
+| `closeButtonClassName` | Extra classes appended to the close button (affects icon via `currentColor`). | `""` |
+| `closeButtonIconClassName` | Extra classes applied to the close icon SVG. | `""` |
 | `toolbarButtonBackground` | Reset/Rotate background. | `rgba(0,0,0,0.35)` |
 | `toolbarButtonBorder` | Reset/Rotate border color. | `rgba(255,255,255,0.5)` |
 | `toolbarButtonColor` | Reset/Rotate icon color. | `#fff` |
@@ -153,6 +157,8 @@ If you need tighter control, pass the `appearance` prop. All fields are optional
 | `sliderThumbBorderColor` | Thumb border color. | `color-mix(in srgb, hsl(var(--accent)) 55%, transparent)` |
 | `sliderThumbRadius` | Thumb corner radius (defaults to `rounded-sm`). | `var(--radius-sm, 0.25rem)` |
 | `modalBackground` | Dialog background fill (overrides `bg-background`). | `undefined` |
+| `titleClassName` | Extra classes applied to the modal title text. | `""` |
+| `descriptionClassName` | Extra classes applied to the modal description text. | `""` |
 
 Example:
 
@@ -165,6 +171,17 @@ Example:
     iconBackground: "rgba(15, 23, 42, 0.08)",
     iconColor: "rgb(15, 23, 42)",
   }}
+/>
+```
+
+To show an existing image (and allow edit/remove on hover), pass `imageUrl` and `onRemove`:
+
+```tsx
+<ImageCropUpload
+  template={avatarTemplate}
+  imageUrl={user.photoUrl}
+  onRemove={() => setUserPhotoUrl(undefined)}
+  onCropped={(result) => uploadAndSetUrl(result.file)}
 />
 ```
 
@@ -183,6 +200,7 @@ This package uses Tailwind utility classes (shadcn-like). Your app should alread
 Key facts:
 - This package exports **one main component**: `ImageCropUpload`, and types like `Template`.
 - Optional `appearance` prop controls the empty state, modal scrim, toolbar buttons, and OK button without forking.
+- Use `imageUrl` to show a preview image; `onRemove` should clear it so the dropzone returns.
 - This package **does not ship preset constants** like `avatarTemplate` / `logoTemplate`. Those live in the consuming app.
 - If you are changing crop behavior, you almost always only need to change the `template={...}` object at the `ImageCropUpload` call site.
 - Do not search `node_modules/@ziptied/image-crop-upload` for `avatarTemplate` (it won’t exist).
