@@ -8,6 +8,7 @@ export type ExportCroppedWebPInput = {
   cropFrameCss: CropFrame;
   output: { width: number; height: number };
   shape: "circle" | "square" | "rect";
+  fitBackground?: string;
   circleAlphaOutput: boolean;
   devicePixelRatio: number;
   baseScale: number;
@@ -73,6 +74,10 @@ export async function exportCroppedWebP(input: ExportCroppedWebPInput) {
   const sh = input.cropFrameCss.height * dpr;
 
   outCtx.clearRect(0, 0, outCanvas.width, outCanvas.height);
+  if (input.fitBackground) {
+    outCtx.fillStyle = input.fitBackground;
+    outCtx.fillRect(0, 0, outCanvas.width, outCanvas.height);
+  }
   outCtx.drawImage(
     viewportCanvas,
     sx,

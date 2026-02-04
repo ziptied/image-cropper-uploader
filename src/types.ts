@@ -5,6 +5,8 @@ export type CropShape = "circle" | "square" | "rect";
 export type Template = {
   shape: CropShape;
   aspect?: number;
+  fit?: "cover" | "contain";
+  fitBackground?: string;
   output: {
     width: number;
     height: number;
