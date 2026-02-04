@@ -238,10 +238,13 @@ export function ImageCropUpload({
 
   const baseScale = React.useMemo(() => {
     if (!decoded) return 1;
-    const vw = Math.max(1, viewportSize.width);
-    const vh = Math.max(1, viewportSize.height);
+    const vw = Math.max(1, cropFrame.width);
+    const vh = Math.max(1, cropFrame.height);
+    if (activeTemplate.fit === "contain") {
+      return Math.min(vw / decoded.width, vh / decoded.height);
+    }
     return Math.max(vw / decoded.width, vh / decoded.height);
-  }, [decoded, viewportSize.width, viewportSize.height]);
+  }, [decoded, cropFrame.width, cropFrame.height, activeTemplate.fit]);
 
   function showError(message: string) {
     setErrorMessage(message);
@@ -387,6 +390,9 @@ export function ImageCropUpload({
         cropFrameCss: cropFrame,
         output: activeTemplate.output,
         shape: activeTemplate.shape,
+        ...(activeTemplate.fit === "contain"
+          ? { fitBackground: activeTemplate.fitBackground ?? "transparent" }
+          : {}),
         circleAlphaOutput: activeTemplate.circleAlphaOutput ?? false,
         devicePixelRatio: dpr,
         baseScale,

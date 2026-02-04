@@ -82,10 +82,26 @@ Common templates:
 {
   shape: "rect",
   aspect: 16 / 9,
+  fit: "cover",
   output: { width: 1600, height: 900 },
   viewport: { width: 520, height: 292 }
 }
 ```
+
+```ts
+// 4:1 logo (fit entire image with padding)
+{
+  shape: "rect",
+  aspect: 4,
+  fit: "contain",
+  fitBackground: "#ffffff", // or "transparent" for alpha
+  output: { width: 800, height: 200 }
+}
+```
+
+`template.fit` options:
+- `"cover"` (default): image always covers the crop frame (no empty space).
+- `"contain"`: image fits entirely inside the crop frame at zoom 1 (padding allowed).
 
 ### Props
 
@@ -176,9 +192,10 @@ Recommended instruction format to an LLM (consumer app):
 1) Find the `ImageCropUpload` usage for the target field (e.g. “logo image”).  
 2) Add/update a local `const avatarTemplate: Template = { shape: "circle", output: { width: 512, height: 512 }, viewport: { width: 360, height: 360 }, circleAlphaOutput: false }`.  
 3) Replace `template={logoUploadTemplate}` with `template={avatarTemplate}`.  
-4) Need branded drop zone / scrim / OK button? Pass `appearance={{ dropzoneBackground: "hsl(var(--primary)/0.1)", dialogScrimColor: "rgba(9,9,11,0.7)", confirmButtonClassName: "bg-emerald-600 hover:bg-emerald-500" }}` (no fork required).  
-5) Need shadcn/BaseUI sliders? Use `renderZoomControl` / `renderRotationControl` to render your Radix slider and call `ctx.onChange(newValue)`.  
-6) Don’t modify this package unless the behavior is missing/buggy.
+4) For wide logos, set `fit: "contain"` and optionally `fitBackground: "#fff"` to ensure the full logo is visible at zoom 1.  
+5) Need branded drop zone / scrim / OK button? Pass `appearance={{ dropzoneBackground: "hsl(var(--primary)/0.1)", dialogScrimColor: "rgba(9,9,11,0.7)", confirmButtonClassName: "bg-emerald-600 hover:bg-emerald-500" }}` (no fork required).  
+6) Need shadcn/BaseUI sliders? Use `renderZoomControl` / `renderRotationControl` to render your Radix slider and call `ctx.onChange(newValue)`.  
+7) Don’t modify this package unless the behavior is missing/buggy.
 
 ---
 
