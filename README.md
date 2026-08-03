@@ -1,209 +1,312 @@
 # Image Crop Upload (React)
 
-A reusable React component for drag-and-drop image selection + modal editing (pan/zoom/rotation) with **WYSIWYG WebP export**.
+Drop in an image, adjust it, get a WebP out. Crop, zoom, free rotation, 90° steps,
+horizontal/vertical flips, ratio presets and avatar (circular) crops — the crop half
+of a [Pintura](https://pqina.nl/pintura/)-style editor, with none of the filters,
+annotation or image-editing surface.
 
-- No Next.js
-- No cropping libraries (Canvas + browser APIs only)
-- Designed for React 18 apps (including Inertia pages)
+- No cropping libraries — Canvas 2D, Pointer Events and an SVG overlay
+- WYSIWYG: the preview and the export run through the same renderer
+- Theming is two knobs: a base colour and a corner shape
+- React 18+, no framework assumptions
 
 ---
 
-## Developer Documentation
-
-### Install
+## Install
 
 ```sh
 bun add @ziptied/image-crop-upload
 ```
 
-Peer deps (your app must already have these):
-- `react` `>=18`
-- `react-dom` `>=18`
+Peer deps your app must already have: `react` `>=18`, `react-dom` `>=18`.
 
-### Basic Usage
+### Tailwind
+
+The components use Tailwind utility classes for layout only (colours and radii are
+inline styles driven by `theme`). Tailwind v4 doesn't scan dependencies by default,
+so point it at the package:
+
+```css
+@import "tailwindcss";
+@source "../node_modules/@ziptied/image-crop-upload/dist";
+```
+
+You do **not** need shadcn, or any CSS variables of your own.
+
+---
+
+## Usage
+
+### All-in-one — dropzone + modal
 
 ```tsx
-import { ImageCropUpload, type Template } from "@ziptied/image-crop-upload";
+import { ImageCropUpload } from "@ziptied/image-crop-upload";
 
-const avatarTemplate: Template = {
-  shape: "circle",
-  output: { width: 512, height: 512 },
-  viewport: { width: 360, height: 360 },
-  circleAlphaOutput: false,
-};
-
-export function AvatarField() {
-  return (
-    <ImageCropUpload
-      template={avatarTemplate}
-      maxBytes={5 * 1024 * 1024}
-      onCropped={({ file }) => {
-        const fd = new FormData();
-        fd.append("image", file);
-        // router.post("/upload", fd); // Inertia example (parent decides)
-      }}
-    />
-  );
-}
-```
-
-### Templates (Crop Guides)
-
-The crop “guide” is driven entirely by the `template` prop.
-
-`template.shape` options:
-- `"circle"`: circular guide (internally crops a square region)
-- `"square"`: 1:1 guide
-- `"rect"`: custom aspect guide using `template.aspect` (width / height)
-
-Common templates:
-
-```ts
-// Circle avatar
-{
-  shape: "circle",
-  output: { width: 512, height: 512 },
-  viewport: { width: 360, height: 360 },
-  circleAlphaOutput: false
-}
-```
-
-```ts
-// Square thumbnail
-{
-  shape: "square",
-  output: { width: 1024, height: 1024 },
-  viewport: { width: 420, height: 420 }
-}
-```
-
-```ts
-// 16:9 banner
-{
-  shape: "rect",
-  aspect: 16 / 9,
-  fit: "cover",
-  output: { width: 1600, height: 900 },
-  viewport: { width: 520, height: 292 }
-}
-```
-
-```ts
-// 4:1 logo (fit entire image with padding)
-{
-  shape: "rect",
-  aspect: 4,
-  fit: "contain",
-  fitBackground: "#ffffff", // or "transparent" for alpha
-  output: { width: 800, height: 200 }
-}
-```
-
-`template.fit` options:
-- `"cover"` (default): image always covers the crop frame (no empty space).
-- `"contain"`: image fits entirely inside the crop frame at zoom 1 (padding allowed).
-
-### Props
-
-`ImageCropUpload` props (high level):
-- `template` (required): guide + output sizing.
-- `onCropped` (required): receives `{ blob, file, width, height, originalFile, transform, ... }` where `file.type` is `image/webp`.
-- `onCancel`: called when the modal closes without exporting.
-- `validateFile`: optional pre-validation hook returning `{ ok: true }` or `{ ok: false, reason }`.
-- `accept` (default `image/*`): forwarded to the file input.
-- `maxBytes`: optional size limit (shows an inline error if exceeded).
-- `webpQuality` (default `0.9`): WebP encoder quality `0..1`.
-- `initialImageUrl`: optionally open the editor with an existing image.
-- `label`: dropzone label text.
-- `disabled`, `className`: standard UI controls.
-- `allowTemplateSwitch`: lets users choose templates in the modal.
-- `templatePresets`: template list used when `allowTemplateSwitch` is enabled.
-- `appearance`: optional object for overriding default colors (see below).
-- `renderZoomControl`: optional render prop for replacing the built-in zoom slider.
-- `renderRotationControl`: optional render prop for replacing the built-in rotation slider.
-
-### Customization & Theming
-
-The component is designed to pick up shared shadcn/baseui tokens out of the box.  
-By default the drop zone and icons use `--accent` for tone and `--muted-foreground` for text.
-
-If you need tighter control, pass the `appearance` prop. All fields are optional:
-
-| Key | Description | Default |
-| --- | ----------- | ------- |
-| `dropzoneBackground` | Idle background color for the dashed area. | `hsl(var(--accent)/0.08)` |
-| `dropzoneBackgroundActive` | Background while a file is dragged over. | `hsl(var(--accent)/0.16)` |
-| `dropzoneBorder` | Idle dashed border color. | `hsl(var(--accent)/0.4)` |
-| `dropzoneBorderActive` | Border color while dragging. | `hsl(var(--accent)/0.8)` |
-| `iconBackground` | Circle background behind the upload/edit glyphs. | `hsl(var(--accent)/0.16)` |
-| `iconColor` | Icon foreground color. | `hsl(var(--accent))` |
-| `dialogScrimColor` | Modal scrim color. | `rgba(0,0,0,0.6)` |
-| `closeButtonColor` | Close button foreground. | `hsl(var(--muted-foreground))` |
-| `closeButtonHoverColor` | Close button hover color. | `hsl(var(--foreground))` |
-| `toolbarButtonBackground` | Reset/Rotate background. | `rgba(0,0,0,0.35)` |
-| `toolbarButtonBorder` | Reset/Rotate border color. | `rgba(255,255,255,0.5)` |
-| `toolbarButtonColor` | Reset/Rotate icon color. | `#fff` |
-| `confirmButtonClassName` | Extra classes appended to the OK button. | `""` |
-| `confirmButtonStyle` | Inline style object for the OK button. | `undefined` |
-| `sliderClassName` | Extra classes applied to both zoom/rotation sliders. | `""` |
-| `sliderStyle` | Inline slider styles (apply at the Radix root). | `undefined` |
-| `sliderTrackColor` | Background color of the slider track. | `hsl(var(--muted))` |
-| `sliderRangeColor` | Foreground (filled) portion color. | `hsl(var(--accent))` |
-| `sliderThumbColor` | Thumb fill color. | `hsl(var(--background))` |
-| `sliderThumbBorderColor` | Thumb border color. | `color-mix(in srgb, hsl(var(--accent)) 55%, transparent)` |
-| `sliderThumbRadius` | Thumb corner radius (defaults to `rounded-sm`). | `var(--radius-sm, 0.25rem)` |
-| `modalBackground` | Dialog background fill (overrides `bg-background`). | `undefined` |
-
-Example:
-
-```tsx
 <ImageCropUpload
-  template={avatarTemplate}
-  appearance={{
-    dropzoneBackground: "rgba(15, 23, 42, 0.04)",
-    dropzoneBorder: "rgba(15, 23, 42, 0.35)",
-    iconBackground: "rgba(15, 23, 42, 0.08)",
-    iconColor: "rgb(15, 23, 42)",
+  crop={{ output: { width: 1024, height: 1024 }, shape: "avatar" }}
+  theme={{ color: "#6366f1", radius: "sm" }}
+  maxBytes={10 * 1024 * 1024}
+  onCropped={async ({ file }) => {
+    const body = new FormData();
+    body.append("avatar", file);
+    await fetch("/api/avatar", { method: "POST", body });
   }}
-/>
+/>;
 ```
 
-This pattern mirrors other design systems (Radix, shadcn/ui, BaseUI): we rely on the shared palette by default, but expose a small override surface so consumers (and automation/LLMs) can align the component with any design system without forking.  
-`confirmButtonClassName` is appended to the default OK button classes, so you can keep the base layout but inject your own tone/variant. `confirmButtonStyle` is applied directly via inline styles for theming systems that prefer CSS variables.  
-Slider controls now use Radix Slider primitives; `sliderClassName` / `sliderStyle` target the root, while the new `sliderTrackColor`, `sliderRangeColor`, `sliderThumbColor`, `sliderThumbBorderColor`, and `sliderThumbRadius` tokens handle the built-in visual treatment (track fill, active range, thumb shape). Need a bespoke slider? Provide `renderZoomControl={(ctx) => <YourSlider value={ctx.value} onValueChange={ctx.onChange} …/>}` and/or `renderRotationControl`. Each render prop receives `{ value, min, max, step, disabled, id, label, onChange, className, style }`.
+`onCropped` is awaited — the editor shows its processing state until your upload
+resolves, then closes.
 
-### Styling Notes
+### Bring your own dialog
 
-This package uses Tailwind utility classes (shadcn-like). Your app should already have Tailwind and CSS variables like `--primary` if you want theme-aware colors.
+`ImageCropper` is the editor on its own: no dropzone, no modal. Give it a `File`,
+`Blob` or URL.
+
+```tsx
+import { useRef } from "react";
+import { ImageCropper, type ImageCropperHandle } from "@ziptied/image-crop-upload";
+
+const cropper = useRef<ImageCropperHandle>(null);
+
+<Dialog>
+  <ImageCropper
+    ref={cropper}
+    image={file}
+    crop={{ output: { width: 512, height: 512 } }}
+    presets={[
+      { label: "Avatar", ratio: 1, shape: "avatar" },
+      { label: "16:9", ratio: 16 / 9 },
+    ]}
+    hideFooter
+    onExport={handleResult}
+  />
+  <DialogFooter>
+    <button onClick={() => cropper.current?.reset()}>Reset</button>
+    <button onClick={() => cropper.current?.export()}>Save</button>
+  </DialogFooter>
+</Dialog>;
+```
 
 ---
 
-## LLM Documentation (How To Use This Package Without Wasting Time)
+## `crop`
 
-Key facts:
-- This package exports **one main component**: `ImageCropUpload`, and types like `Template`.
-- Optional `appearance` prop controls the empty state, modal scrim, toolbar buttons, and OK button without forking.
-- This package **does not ship preset constants** like `avatarTemplate` / `logoTemplate`. Those live in the consuming app.
-- If you are changing crop behavior, you almost always only need to change the `template={...}` object at the `ImageCropUpload` call site.
-- Do not search `node_modules/@ziptied/image-crop-upload` for `avatarTemplate` (it won’t exist).
+```ts
+type CropConfig = {
+  output: { width: number; height: number }; // required — the exported size
+  ratio?: number;          // width / height. Defaults to the output's aspect.
+  shape?: "rect" | "avatar";               // default "rect"
+  fit?: "cover" | "contain";               // initial fit, default "cover"
+  background?: string;     // painted where the image doesn't reach. Default transparent.
+  limitToImage?: boolean;  // default: fit === "cover"
+  alphaMask?: boolean;     // avatar only: bake the circle into alpha. Default true.
+  viewport?: { width: number; height: number }; // fixed px, else responsive
+};
+```
 
-Recommended instruction format to an LLM (consumer app):
+**Aspect ratio is enforced.** The crop frame is locked to `ratio` and can't be
+resized — the image pans, zooms and rotates underneath it. Without `presets` there's
+no way for the user to change it. `ratio` is optional because it defaults to the
+output's own aspect, so `output: { width: 1920, height: 1080 }` already crops 16:9;
+set it explicitly only when you want a frame that differs from the exported size.
 
-1) Find the `ImageCropUpload` usage for the target field (e.g. “logo image”).  
-2) Add/update a local `const avatarTemplate: Template = { shape: "circle", output: { width: 512, height: 512 }, viewport: { width: 360, height: 360 }, circleAlphaOutput: false }`.  
-3) Replace `template={logoUploadTemplate}` with `template={avatarTemplate}`.  
-4) For wide logos, set `fit: "contain"` and optionally `fitBackground: "#fff"` to ensure the full logo is visible at zoom 1.  
-5) Need branded drop zone / scrim / OK button? Pass `appearance={{ dropzoneBackground: "hsl(var(--primary)/0.1)", dialogScrimColor: "rgba(9,9,11,0.7)", confirmButtonClassName: "bg-emerald-600 hover:bg-emerald-500" }}` (no fork required).  
-6) Need shadcn/BaseUI sliders? Use `renderZoomControl` / `renderRotationControl` to render your Radix slider and call `ctx.onChange(newValue)`.  
-7) Don’t modify this package unless the behavior is missing/buggy.
+**`limitToImage`** is Pintura's `imageCropLimitToImage` — "can the crop go outside
+the image?". When `true` (the default for `cover`), pan and zoom are constrained so
+the crop frame can never leave the image at any rotation, and the zoom slider's floor
+rises as you rotate. When `false`, you can crop past the edge and the gap is filled
+with `background`.
+
+### `presets`
+
+Pass two or more and a ratio picker appears above the viewport. `crop` still defines
+the starting state; a preset matching it is highlighted.
+
+```ts
+presets={[
+  { label: "Avatar", ratio: 1, shape: "avatar" },
+  { label: "1:1", ratio: 1 },
+  { label: "4:3", ratio: 4 / 3 },
+  { label: "16:9", ratio: 16 / 9 },
+]}
+```
 
 ---
 
-## Dev (This Repo)
+## Props
+
+### `<ImageCropUpload>`
+
+| Prop | Type | Default |
+|---|---|---|
+| `crop` **(req)** | `CropConfig` | — |
+| `onCropped` **(req)** | `(r: CropResult) => void \| Promise<void>` | — |
+| `onCancel` | `() => void` | — |
+| `presets` | `RatioPreset[]` | — |
+| `theme` | `Theme` | indigo / `sm` |
+| `quality` | `number` (0–1) | `0.9` |
+| `labels` | `Partial<Labels>` | English defaults |
+| `validateFile` | `(f: File) => {ok:true} \| {ok:false; reason:string}` | — |
+| `accept` | `string` | `"image/*"` |
+| `maxBytes` | `number` | — |
+| `initialImageUrl` | `string` | — |
+| `disabled` | `boolean` | `false` |
+| `className` | `string` | — |
+| `children` | `ReactNode` | replaces the dropzone body |
+
+### `<ImageCropper>`
+
+Same `crop`, `presets`, `theme`, `quality`, `labels`, `className`, plus:
+
+| Prop | Type | Default |
+|---|---|---|
+| `image` **(req)** | `File \| Blob \| string` | — |
+| `onExport` **(req)** | `(r: CropResult) => void \| Promise<void>` | — |
+| `onCancel` | `() => void` | hides the cancel button when omitted |
+| `onError` | `(e: Error) => void` | — |
+| `hideFooter` | `boolean` | `false` |
+| `ref` | `ImageCropperHandle` | `{ export(), reset() }` |
+
+### `CropResult`
+
+```ts
+{
+  blob: Blob;
+  file: File;              // ready for FormData
+  fileName: string;        // original name, .webp extension
+  mimeType: "image/webp";
+  width: number; height: number;
+  originalFile: File;
+  transform: { zoom, rotation, flipX, flipY, panX, panY };
+}
+```
+
+---
+
+## Theming
+
+```ts
+type Theme = {
+  color?: string;                        // any CSS colour. Default "#4f46e5".
+  radius?: "none" | "sm" | "full";       // default "sm"
+  foreground?: string;                   // text on `color`. Default: auto-contrast.
+  scheme?: "auto" | "light" | "dark";    // default "auto" (inherit the page)
+};
+```
+
+Every other tone — dropzone tint, borders, slider track, crop guide, icon chips — is
+derived from `color`. `radius` maps to two values internally so `"full"` gives you
+pill-shaped controls without a pill-shaped dialog.
+
+**Contrast is derived, not assumed.** Text drawn *on* the accent (the confirm
+button) resolves to black or white from the accent's own lightness, and the accent
+used *as* text is bent toward the page's text colour so a pale brand colour stays
+legible. Both hold ≥4.5:1 across light and dark. Override with `foreground` only if
+you need a specific pairing.
+
+### Wiring it to your app's colours
+
+You send **one** colour, not one per theme:
+
+```tsx
+<ImageCropUpload theme={{ color: "var(--brand)" }} … />
+```
+
+`color` is never parsed in JS, so it can be a CSS variable — which means your own
+stylesheet keeps owning the theming and React never has to know which mode you're
+in:
+
+```css
+:root      { color-scheme: light; --brand: #4f46e5; }
+.dark      { color-scheme: dark;  --brand: #a5b4fc; }  /* lighter for dark bg */
+```
+
+Flip `--brand` however you already do it and the editor follows. Passing a plain
+`"#4f46e5"`, `"hsl(250 84% 54%)"` or `"rebeccapurple"` works just as well if you
+only have one brand colour.
+
+### Light and dark
+
+Surfaces are translucent tints, so they sit on whatever is behind them and adapt on
+their own. The opaque surfaces take their colours from the `Canvas` / `CanvasText`
+system colours, which follow `color-scheme`.
+
+`scheme: "auto"` **inherits** — so set `color-scheme` on `:root` and the editor
+follows your app:
+
+```css
+:root { color-scheme: light dark; }   /* or just: dark */
+```
+
+If you theme with a `.dark` class or `data-theme` attribute and don't set
+`color-scheme`, there's nothing to inherit, so say it explicitly:
+
+```tsx
+theme={{ color: brand, scheme: isDark ? "dark" : "light" }}
+```
+
+There is deliberately no `dark:` variant anywhere in the package, so none of this
+depends on how your Tailwind dark mode is configured.
+
+If you need finer control, style the wrapper via `className` or use `ImageCropper`
+inside your own chrome.
+
+---
+
+## Export quality
+
+The crop region is rendered at `output.width / cropFrame.width` canvas pixels per CSS
+pixel, so a 2048px output from a 400px on-screen frame is drawn from source pixels
+rather than upscaled from the preview.
+
+---
+
+## Dev
 
 ```sh
 bun install
-bun run build
+bun run dev            # playground at localhost:5173
+bun test               # crop clamping + ratio maths
 bun run typecheck
-bun lint
+bun run lint
+bun run build
+bunx react-doctor      # React health check
 ```
+
+The playground (`examples/`) deliberately ships no design-system CSS variables — if
+the editor looks right there, its theming is genuinely self-contained.
+
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for the transform model, the containment
+maths behind `limitToImage`, and why the modal uses `showModal()`.
+
+---
+
+## Upgrading from 0.x
+
+1.0.0 is a clean break — every 0.x call site fails to compile.
+
+**→ [MIGRATION.md](./MIGRATION.md) is the step-by-step guide**, including the
+changes that *don't* fail to compile but do change your output: circle crops are
+alpha-masked by default now, pan/zoom is constrained by default, exported files are
+larger, and errors thrown from `onCropped` are shown to the user. It's written to be
+followed directly by a coding agent.
+
+The renames at a glance:
+
+| 0.x | 1.0 |
+|---|---|
+| `template={{ shape, aspect, output, ... }}` | `crop={{ shape, ratio, output, ... }}` |
+| `shape: "circle" \| "square" \| "rect"` | `shape: "rect" \| "avatar"` + `ratio` |
+| `aspect` | `ratio` |
+| `appearance` (21 keys) | `theme` (`color`, `radius`) |
+| `allowTemplateSwitch` + `templatePresets` | `presets` |
+| `webpQuality` | `quality` |
+| `label` | `labels.dropzone` |
+| `renderZoomControl` / `renderRotationControl` | removed — use `theme`, or `ImageCropper` |
+| `circleAlphaOutput` | `alphaMask` |
+| `fitBackground` | `background` (applies to both fits) |
+| `result.crop` (never populated) | removed |
+
+New in 1.0: horizontal/vertical flips, ratio presets in the UI, wheel and pinch zoom,
+pan/zoom clamping (`limitToImage`), output-resolution export, a headless
+`<ImageCropper>`, working Escape/focus-trap on the modal, and unique DOM ids so two
+instances can coexist on a page.

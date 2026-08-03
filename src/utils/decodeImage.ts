@@ -14,11 +14,14 @@ export type DecodedImage =
       cleanup?: () => void;
     };
 
-type DecodeImageInput = File | string;
+type DecodeImageInput = File | Blob | string;
 
-function loadHtmlImage(src: string) {
+function loadHtmlImage(src: string, crossOrigin = false) {
   return new Promise<HTMLImageElement>((resolve, reject) => {
     const img = new Image();
+    // Without this a remote image taints the canvas and `toBlob` throws later,
+    // long after the cause. Object URLs are same-origin, so it's opt-in.
+    if (crossOrigin) img.crossOrigin = "anonymous";
     img.decoding = "async";
     img.onload = () => resolve(img);
     img.onerror = () => reject(new Error("Failed to load image"));
@@ -37,7 +40,7 @@ export async function decodeImage(
   input: DecodeImageInput,
 ): Promise<DecodedImage> {
   if (typeof input === "string") {
-    const image = await loadHtmlImage(input);
+    const image = await loadHtmlImage(input, true);
     return {
       kind: "html-image",
       image,

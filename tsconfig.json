@@ -12,7 +12,7 @@
     "declaration": true,
     "emitDeclarationOnly": false,
     "outDir": "dist",
-    "types": ["react", "react-dom"]
+    "types": ["react", "react-dom", "bun"]
   },
   "include": ["src"]
 }

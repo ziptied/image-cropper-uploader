@@ -1,3 +1,4 @@
+import type { CropShape, Transform } from "../types";
 import type { CropFrame } from "./cropFrame";
 import type { DecodedImage } from "./decodeImage";
 import { renderViewportCanvas } from "./renderViewportCanvas";
@@ -7,17 +8,11 @@ export type ExportCroppedWebPInput = {
   viewportCss: { width: number; height: number };
   cropFrameCss: CropFrame;
   output: { width: number; height: number };
-  shape: "circle" | "square" | "rect";
-  fitBackground?: string;
-  circleAlphaOutput: boolean;
-  devicePixelRatio: number;
+  shape: CropShape;
+  background?: string;
+  alphaMask: boolean;
   baseScale: number;
-  transform: {
-    zoom: number;
-    rotation: number;
-    panX: number;
-    panY: number;
-  };
+  transform: Transform;
   quality: number;
 };
 
@@ -49,13 +44,23 @@ function applyCircleMask(
 }
 
 /**
- * Export the visible crop region to WebP, scaled to the template output size.
+ * Export the visible crop region to WebP at the template's output size.
+ *
+ * The viewport is re-rendered at `output.width / cropFrame.width` canvas pixels
+ * per CSS pixel, so the crop region lands on the output canvas 1:1 and never
+ * gets upscaled from whatever the on-screen preview happened to be.
  */
 export async function exportCroppedWebP(input: ExportCroppedWebPInput) {
+  if (input.cropFrameCss.width <= 0 || input.cropFrameCss.height <= 0) {
+    throw new Error("Crop frame has no size");
+  }
+
+  const pixelRatio = input.output.width / input.cropFrameCss.width;
+
   const viewportCanvas = renderViewportCanvas({
     image: input.image,
     viewportCss: input.viewportCss,
-    devicePixelRatio: input.devicePixelRatio,
+    pixelRatio,
     baseScale: input.baseScale,
     transform: input.transform,
   });
@@ -67,30 +72,25 @@ export async function exportCroppedWebP(input: ExportCroppedWebPInput) {
   const outCtx = outCanvas.getContext("2d");
   if (!outCtx) throw new Error("Canvas rendering context not available");
 
-  const dpr = input.devicePixelRatio;
-  const sx = input.cropFrameCss.x * dpr;
-  const sy = input.cropFrameCss.y * dpr;
-  const sw = input.cropFrameCss.width * dpr;
-  const sh = input.cropFrameCss.height * dpr;
-
   outCtx.clearRect(0, 0, outCanvas.width, outCanvas.height);
-  if (input.fitBackground) {
-    outCtx.fillStyle = input.fitBackground;
+  if (input.background && input.background !== "transparent") {
+    outCtx.fillStyle = input.background;
     outCtx.fillRect(0, 0, outCanvas.width, outCanvas.height);
   }
+
   outCtx.drawImage(
     viewportCanvas,
-    sx,
-    sy,
-    sw,
-    sh,
+    input.cropFrameCss.x * pixelRatio,
+    input.cropFrameCss.y * pixelRatio,
+    input.cropFrameCss.width * pixelRatio,
+    input.cropFrameCss.height * pixelRatio,
     0,
     0,
     outCanvas.width,
     outCanvas.height,
   );
 
-  if (input.shape === "circle" && input.circleAlphaOutput) {
+  if (input.shape === "avatar" && input.alphaMask) {
     applyCircleMask(outCtx, outCanvas.width, outCanvas.height);
   }
 

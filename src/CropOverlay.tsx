@@ -8,6 +8,8 @@ export type CropOverlayProps = {
   shape: CropShape;
   frame: CropFrame;
   viewport: { width: number; height: number };
+  /** Guide stroke colour. Defaults to the themed base colour. */
+  stroke?: string;
   className?: string;
 };
 
@@ -19,17 +21,31 @@ export function CropOverlay({
   shape,
   frame,
   viewport,
+  stroke = "var(--icu-color)",
   className,
 }: CropOverlayProps) {
   const maskId = React.useId();
-  const showCircle = shape === "circle";
 
   // If we don't know the viewport size yet, we can't align the overlay reliably.
   if (viewport.width <= 0 || viewport.height <= 0) return null;
 
+  const isCircle = shape === "avatar";
   const cx = frame.x + frame.width / 2;
   const cy = frame.y + frame.height / 2;
   const r = Math.min(frame.width, frame.height) / 2;
+
+  const guide = (props: React.SVGProps<SVGCircleElement & SVGRectElement>) =>
+    isCircle ? (
+      <circle cx={cx} cy={cy} r={r} {...props} />
+    ) : (
+      <rect
+        x={frame.x}
+        y={frame.y}
+        width={frame.width}
+        height={frame.height}
+        {...props}
+      />
+    );
 
   return (
     <svg
@@ -56,17 +72,7 @@ export function CropOverlay({
             height={viewport.height}
             fill="white"
           />
-          {showCircle ? (
-            <circle cx={cx} cy={cy} r={r} fill="black" />
-          ) : (
-            <rect
-              x={frame.x}
-              y={frame.y}
-              width={frame.width}
-              height={frame.height}
-              fill="black"
-            />
-          )}
+          {guide({ fill: "black" })}
         </mask>
       </defs>
 
@@ -79,26 +85,7 @@ export function CropOverlay({
         mask={`url(#${maskId})`}
       />
 
-      {showCircle ? (
-        <circle
-          cx={cx}
-          cy={cy}
-          r={r}
-          fill="transparent"
-          stroke="rgba(255,255,255,0.9)"
-          strokeWidth="2"
-        />
-      ) : (
-        <rect
-          x={frame.x}
-          y={frame.y}
-          width={frame.width}
-          height={frame.height}
-          fill="transparent"
-          stroke="rgba(255,255,255,0.9)"
-          strokeWidth="2"
-        />
-      )}
+      {guide({ fill: "transparent", stroke, strokeWidth: 2 })}
     </svg>
   );
 }

@@ -1,4 +1,4 @@
-import type { CropShape, Template } from "../types";
+import type { CropConfig } from "../types";
 
 export type CropFrame = {
   x: number;
@@ -7,18 +7,26 @@ export type CropFrame = {
   height: number;
 };
 
-export function getTemplateAspect(template: Template) {
-  if (template.shape === "circle" || template.shape === "square") return 1;
-  return template.aspect ?? 1;
+/**
+ * Avatar is always circular, so its ratio is fixed at 1. Otherwise an explicit
+ * `ratio` wins, falling back to the output's own aspect — anything else would
+ * crop one shape and then squash it into a differently-shaped file.
+ */
+export function getCropRatio(
+  crop: Pick<CropConfig, "ratio" | "shape" | "output">,
+) {
+  if (crop.shape === "avatar") return 1;
+  const ratio = crop.ratio ?? crop.output.width / crop.output.height;
+  return Number.isFinite(ratio) && ratio > 0 ? ratio : 1;
 }
 
+/** Largest rect of the given ratio, centred in the viewport with padding. */
 export function computeCropFrame(
   viewportWidth: number,
   viewportHeight: number,
-  template: Pick<Template, "shape" | "aspect">,
+  ratio: number,
   pad = 24,
 ): CropFrame {
-  const aspect = template.shape === "rect" ? (template.aspect ?? 1) : 1;
   const availableWidth = Math.max(0, viewportWidth - 2 * pad);
   const availableHeight = Math.max(0, viewportHeight - 2 * pad);
 
@@ -28,9 +36,9 @@ export function computeCropFrame(
 
   const availableAspect = availableWidth / availableHeight;
   const width =
-    availableAspect > aspect ? availableHeight * aspect : availableWidth;
+    availableAspect > ratio ? availableHeight * ratio : availableWidth;
   const height =
-    availableAspect > aspect ? availableHeight : availableWidth / aspect;
+    availableAspect > ratio ? availableHeight : availableWidth / ratio;
 
   return {
     x: (viewportWidth - width) / 2,
