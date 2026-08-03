@@ -1,9 +1,16 @@
 export type {
+  CropConfig,
+  CropResult,
   CropShape,
-  ImageCropUploadAppearance,
+  ImageCropperHandle,
+  ImageCropperProps,
   ImageCropUploadProps,
-  ImageCropUploadResult,
-  SliderRenderContext,
-  Template,
+  Labels,
+  RatioPreset,
+  Theme,
+  ThemeRadius,
+  Transform,
 } from "./types";
+export { CropOverlay } from "./CropOverlay";
+export { ImageCropper } from "./ImageCropper";
 export { ImageCropUpload } from "./ImageCropUpload";

@@ -1,10 +1,7 @@
 import * as SliderPrimitive from "@radix-ui/react-slider";
-import type * as React from "react";
-
-import { cn } from "../utils/cn";
+import * as React from "react";
 
 type SliderControlProps = {
-  id: string;
   label: string;
   value: number;
   min: number;
@@ -12,15 +9,15 @@ type SliderControlProps = {
   step: number;
   disabled?: boolean;
   onChange: (value: number) => void;
-  className?: string;
-  style?: React.CSSProperties;
-  trackStyle?: React.CSSProperties;
-  rangeStyle?: React.CSSProperties;
-  thumbStyle?: React.CSSProperties;
+  /** Rendered on the right of the label, e.g. "1.4×" or "45°". */
+  hint?: string;
 };
 
+/**
+ * All colours come from the `--icu-*` custom properties set by the editor root,
+ * so a consumer only ever sets `theme={{ color, radius }}`.
+ */
 export function SliderControl({
-  id,
   label,
   value,
   min,
@@ -28,19 +25,22 @@ export function SliderControl({
   step,
   disabled,
   onChange,
-  className,
-  style,
-  trackStyle,
-  rangeStyle,
-  thumbStyle,
+  hint,
 }: SliderControlProps) {
+  const labelId = React.useId();
+
   return (
     <div className="space-y-2">
-      <label className="text-sm font-medium" htmlFor={id}>
-        {label}
-      </label>
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="text-sm font-medium" id={labelId}>
+          {label}
+        </span>
+        {hint ? (
+          <span className="text-xs tabular-nums opacity-60">{hint}</span>
+        ) : null}
+      </div>
       <SliderPrimitive.Root
-        id={id}
+        aria-labelledby={labelId}
         value={[value]}
         min={min}
         max={max}
@@ -52,24 +52,27 @@ export function SliderControl({
             onChange(first);
           }
         }}
-        className={cn(
-          "relative flex w-full touch-none select-none items-center",
-          className,
-        )}
-        style={style}
+        className="relative flex w-full touch-none select-none items-center disabled:opacity-50"
       >
         <SliderPrimitive.Track
-          className="relative h-1.5 w-full grow overflow-hidden rounded-sm bg-muted"
-          style={trackStyle}
+          className="relative h-1.5 w-full grow overflow-hidden"
+          style={{
+            backgroundColor: "var(--icu-line)",
+            borderRadius: "var(--icu-radius)",
+          }}
         >
           <SliderPrimitive.Range
-            className="absolute h-full bg-primary"
-            style={rangeStyle}
+            className="absolute h-full"
+            style={{ backgroundColor: "var(--icu-color)" }}
           />
         </SliderPrimitive.Track>
         <SliderPrimitive.Thumb
-          className="block h-4 w-4 rounded-sm border border-primary/50 bg-background shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none"
-          style={thumbStyle}
+          className="block h-4 w-4 border-2 shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none"
+          style={{
+            backgroundColor: "var(--icu-surface)",
+            borderColor: "var(--icu-color)",
+            borderRadius: "var(--icu-radius)",
+          }}
         />
       </SliderPrimitive.Root>
     </div>

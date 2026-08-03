@@ -1,0 +1,11 @@
+{
+  "ignore": {
+    "overrides": [
+      {
+        "comment": "src/icons/* are vendored Nucleo premium icons, kept byte-for-byte as exported so re-exports produce clean diffs. Rounding their path precision would save ~100 bytes and desync them from the source library.",
+        "files": ["src/icons/**"],
+        "rules": ["react-doctor/rendering-svg-precision"]
+      }
+    ]
+  }
+}

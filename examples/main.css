@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+/*
+ * Tailwind v4 doesn't scan dependencies by default, so the structural classes
+ * the components use have to be pointed at explicitly. In a consuming app this
+ * is `@source "../node_modules/@ziptied/image-crop-upload/dist";`.
+ */
+@source "../src";
+
+/*
+ * Deliberately no shadcn tokens (--primary, --muted, --accent, --radius).
+ * If the editor still looks right here, its theming really is self-contained.
+ */
+body {
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    sans-serif;
+}

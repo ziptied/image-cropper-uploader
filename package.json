@@ -1,7 +1,7 @@
 {
   "name": "@ziptied/image-crop-upload",
-  "version": "0.2.0",
-  "description": "Reusable image cropper with pan, zoom, rotation, and WebP export for React + Inertia",
+  "version": "1.0.0",
+  "description": "React image cropper — pan, zoom, rotate, flip, ratio and avatar crop shapes, WebP export",
   "type": "module",
   "sideEffects": false,
   "license": "MIT",
@@ -14,12 +14,24 @@
     "url": "https://github.com/ziptied/image-cropper-uploader/issues"
   },
   "homepage": "https://github.com/ziptied/image-cropper-uploader#readme",
-  "keywords": ["react", "inertia", "shadcn", "crop", "image", "webp", "canvas"],
+  "keywords": [
+    "react",
+    "crop",
+    "cropper",
+    "image",
+    "avatar",
+    "webp",
+    "canvas",
+    "rotate",
+    "flip"
+  ],
   "scripts": {
     "build": "tsup",
+    "dev": "vite --config examples/vite.config.ts",
     "prepack": "bun run build",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
+    "test": "bun test",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "peerDependencies": {
@@ -30,13 +42,18 @@
     "@radix-ui/react-slider": "^1.3.6"
   },
   "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/bun": "^1.3.14",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
-    "@biomejs/biome": "^1.9.4",
+    "@vitejs/plugin-react": "^6.0.5",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
+    "tailwindcss": "^4.3.3",
     "tsup": "^8.3.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vite": "^8.2.0"
   },
   "files": ["dist"],
   "publishConfig": {
