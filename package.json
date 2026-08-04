@@ -4,6 +4,7 @@
   "description": "React image cropper — pan, zoom, rotate, flip, ratio and avatar crop shapes, WebP export",
   "type": "module",
   "sideEffects": false,
+  "packageManager": "bun@1.3.8",
   "license": "MIT",
   "author": "ziptied",
   "repository": {
@@ -29,6 +30,9 @@
     "build": "tsup",
     "dev": "vite --config examples/vite.config.ts",
     "prepack": "bun run build",
+    "prepublishOnly": "bun run validate",
+    "pack:dry": "npm pack --dry-run",
+    "validate": "bun run typecheck && bun run test && bun run lint && bun run build",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "test": "bun test",
@@ -55,7 +59,7 @@
     "typescript": "^5.7.0",
     "vite": "^8.2.0"
   },
-  "files": ["dist"],
+  "files": ["dist", "README.md", "MIGRATION.md", "ARCHITECTURE.md", "LICENSE"],
   "publishConfig": {
     "access": "public"
   },
@@ -65,7 +69,9 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
       "default": "./dist/index.js"
-    }
+    },
+    "./package.json": "./package.json"
   }
 }

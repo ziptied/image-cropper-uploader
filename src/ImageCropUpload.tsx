@@ -58,11 +58,14 @@ export function ImageCropUpload({
   presets,
   theme,
   quality,
+  maxOutputBytes,
+  minQuality,
   labels,
   validateFile,
   accept = "image/*",
   maxBytes,
   initialImageUrl,
+  onRemoveExisting,
   disabled = false,
   className,
   children,
@@ -144,6 +147,9 @@ export function ImageCropUpload({
         {...(initialImageUrl && !disabled
           ? { onEditExisting: () => void loadInitialUrl(initialImageUrl) }
           : {})}
+        {...(initialImageUrl && onRemoveExisting && !disabled
+          ? { onRemoveExisting }
+          : {})}
       >
         {children}
       </Dropzone>
@@ -165,6 +171,8 @@ export function ImageCropUpload({
                 {...(presets ? { presets } : {})}
                 {...(theme ? { theme } : {})}
                 {...(quality != null ? { quality } : {})}
+                {...(maxOutputBytes != null ? { maxOutputBytes } : {})}
+                {...(minQuality != null ? { minQuality } : {})}
                 {...(labels ? { labels } : {})}
               />
             </CropDialog>,
@@ -194,7 +202,7 @@ function CropDialog({
     <dialog
       ref={dialogRef}
       aria-labelledby={titleId}
-      className="w-[min(92vw,760px)] border p-4 shadow-lg backdrop:bg-black/60"
+      className="w-fit max-w-[calc(100vw-2rem)] border p-4 shadow-lg backdrop:bg-black/60"
       style={{
         ...vars,
         // Painted surface, so it must carry its own text colour rather than

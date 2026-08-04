@@ -22,5 +22,6 @@ export const DEFAULT_LABELS: Labels = {
   dropzoneHint: "PNG, JPG or WebP",
   dropzoneDrag: "or drag and drop",
   editExisting: "Edit existing image",
+  removeExisting: "Remove existing image",
   close: "Close",
 };

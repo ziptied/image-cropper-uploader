@@ -49,6 +49,8 @@ export const ImageCropper = React.forwardRef<
     presets,
     theme,
     quality = 0.9,
+    maxOutputBytes,
+    minQuality,
     labels,
     className,
     hideFooter = false,
@@ -204,6 +206,8 @@ export const ImageCropper = React.forwardRef<
           baseScale,
           transform: drawn,
           quality,
+          ...(maxOutputBytes != null ? { maxOutputBytes } : {}),
+          ...(minQuality != null ? { minQuality } : {}),
         }),
       );
     } catch (cause) {
@@ -228,6 +232,8 @@ export const ImageCropper = React.forwardRef<
     baseScale,
     drawn,
     quality,
+    maxOutputBytes,
+    minQuality,
     onExport,
     onError,
     setErrorMessage,
@@ -268,7 +274,7 @@ export const ImageCropper = React.forwardRef<
         />
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-[1fr_240px]">
+      <div className="grid gap-4 lg:grid-cols-[auto_240px]">
         <div className="flex flex-col gap-3">
           <div
             ref={viewportRef}

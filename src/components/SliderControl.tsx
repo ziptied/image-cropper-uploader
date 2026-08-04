@@ -52,7 +52,7 @@ export function SliderControl({
             onChange(first);
           }
         }}
-        className="relative flex w-full touch-none select-none items-center disabled:opacity-50"
+        className="relative flex w-full touch-none select-none items-center px-2 disabled:opacity-50"
       >
         <SliderPrimitive.Track
           className="relative h-1.5 w-full grow overflow-hidden"

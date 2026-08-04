@@ -15,6 +15,8 @@ export type ExportCropInput = {
   baseScale: number;
   transform: Transform;
   quality: number;
+  maxOutputBytes?: number;
+  minQuality?: number;
 };
 
 function stripExtension(fileName: string) {
@@ -50,6 +52,10 @@ export async function exportCrop(input: ExportCropInput): Promise<CropResult> {
     baseScale: input.baseScale,
     transform: input.transform,
     quality: clamp(input.quality, 0, 1),
+    ...(input.maxOutputBytes != null
+      ? { maxOutputBytes: input.maxOutputBytes }
+      : {}),
+    ...(input.minQuality != null ? { minQuality: input.minQuality } : {}),
   });
 
   const fileName = `${stripExtension(originalFile.name || "cropped")}.webp`;
