@@ -1,6 +1,7 @@
 import type { CropShape, Transform } from "../types";
 import type { CropFrame } from "./cropFrame";
 import type { DecodedImage } from "./decodeImage";
+import { encodeWithOutputBudget } from "./outputQuality";
 import { renderViewportCanvas } from "./renderViewportCanvas";
 
 export type ExportCroppedWebPInput = {
@@ -14,6 +15,8 @@ export type ExportCroppedWebPInput = {
   baseScale: number;
   transform: Transform;
   quality: number;
+  maxOutputBytes?: number;
+  minQuality?: number;
 };
 
 function toWebpBlob(canvas: HTMLCanvasElement, quality: number) {
@@ -94,6 +97,12 @@ export async function exportCroppedWebP(input: ExportCroppedWebPInput) {
     applyCircleMask(outCtx, outCanvas.width, outCanvas.height);
   }
 
-  const blob = await toWebpBlob(outCanvas, input.quality);
-  return { blob, width: outCanvas.width, height: outCanvas.height };
+  const { blob, quality } = await encodeWithOutputBudget(
+    (nextQuality) => toWebpBlob(outCanvas, nextQuality),
+    input.quality,
+    input.maxOutputBytes,
+    input.minQuality,
+  );
+
+  return { blob, width: outCanvas.width, height: outCanvas.height, quality };
 }

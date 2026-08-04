@@ -144,18 +144,22 @@ presets={[
 | `presets` | `RatioPreset[]` | — |
 | `theme` | `Theme` | indigo / `sm` |
 | `quality` | `number` (0–1) | `0.9` |
+| `maxOutputBytes` | `number` | — |
+| `minQuality` | `number` (0–1) | `0.35` |
 | `labels` | `Partial<Labels>` | English defaults |
 | `validateFile` | `(f: File) => {ok:true} \| {ok:false; reason:string}` | — |
 | `accept` | `string` | `"image/*"` |
 | `maxBytes` | `number` | — |
 | `initialImageUrl` | `string` | — |
+| `onRemoveExisting` | `() => void` | — |
 | `disabled` | `boolean` | `false` |
 | `className` | `string` | — |
 | `children` | `ReactNode` | replaces the dropzone body |
 
 ### `<ImageCropper>`
 
-Same `crop`, `presets`, `theme`, `quality`, `labels`, `className`, plus:
+Same `crop`, `presets`, `theme`, `quality`, `maxOutputBytes`, `minQuality`,
+`labels`, `className`, plus:
 
 | Prop | Type | Default |
 |---|---|---|
@@ -188,7 +192,7 @@ Same `crop`, `presets`, `theme`, `quality`, `labels`, `className`, plus:
 type Theme = {
   color?: string;                        // any CSS colour. Default "#4f46e5".
   radius?: "none" | "sm" | "full";       // default "sm"
-  foreground?: string;                   // text on `color`. Default: auto-contrast.
+  foreground?: string;                   // text on `color`. Default: white.
   scheme?: "auto" | "light" | "dark";    // default "auto" (inherit the page)
 };
 ```
@@ -197,11 +201,10 @@ Every other tone — dropzone tint, borders, slider track, crop guide, icon chip
 derived from `color`. `radius` maps to two values internally so `"full"` gives you
 pill-shaped controls without a pill-shaped dialog.
 
-**Contrast is derived, not assumed.** Text drawn *on* the accent (the confirm
-button) resolves to black or white from the accent's own lightness, and the accent
-used *as* text is bent toward the page's text colour so a pale brand colour stays
-legible. Both hold ≥4.5:1 across light and dark. Override with `foreground` only if
-you need a specific pairing.
+Text and icons drawn *on* the accent, including the confirm button, default to
+white. Override `foreground` only when your accent needs a different pairing. The
+accent used *as* text is bent toward the page's text colour so a pale brand colour
+stays legible.
 
 ### Wiring it to your app's colours
 
@@ -258,6 +261,11 @@ The crop region is rendered at `output.width / cropFrame.width` canvas pixels pe
 pixel, so a 2048px output from a 400px on-screen frame is drawn from source pixels
 rather than upscaled from the preview.
 
+Use `maxOutputBytes` when your upload endpoint has a hard byte cap. The cropper
+first exports at `quality`, then retries at lower quality down to `minQuality`
+until the WebP fits or the floor is reached. `maxBytes` still validates the
+source file selected by the user.
+
 ---
 
 ## Dev
@@ -269,6 +277,8 @@ bun test               # crop clamping + ratio maths
 bun run typecheck
 bun run lint
 bun run build
+bun run validate       # typecheck + tests + lint + build
+bun run pack:dry       # inspect the npm tarball before publishing
 bunx react-doctor      # React health check
 ```
 
@@ -277,6 +287,27 @@ the editor looks right there, its theming is genuinely self-contained.
 
 See [ARCHITECTURE.md](./ARCHITECTURE.md) for the transform model, the containment
 maths behind `limitToImage`, and why the modal uses `showModal()`.
+
+## Release
+
+Publish `1.0.0` from a clean tag named `v1.0.0`.
+
+1. Configure npm trusted publishing for
+   `ziptied/image-cropper-uploader`, workflow `publish.yml`, environment `npm`.
+2. Run `bun run validate` and `bun run pack:dry` locally.
+3. Create and publish the GitHub release for `v1.0.0`; the workflow validates,
+   inspects the tarball and runs `npm publish`.
+
+Manual fallback:
+
+```sh
+bun run validate
+bun run pack:dry
+npm publish --access public
+```
+
+`prepublishOnly` also runs `bun run validate`, so a direct publish fails before it
+uploads if typecheck, tests, lint or build fail.
 
 ---
 

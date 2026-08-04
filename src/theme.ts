@@ -5,24 +5,7 @@ import type { Theme, ThemeRadius } from "./types";
 // indigo-600. indigo-500 (#6366f1) lands at 4.47:1 against white — just under AA.
 const DEFAULT_COLOR = "#4f46e5";
 
-/**
- * Text drawn on top of `--icu-color`, picked from that colour's own lightness:
- * white on a dark accent, black on a light one.
- *
- * It has to be done in CSS rather than JS because `color` may be any CSS colour
- * — `var(--brand)`, `hsl(var(--accent))`, a named colour — none of which are
- * reliably parseable before the browser resolves them.
- *
- * A fixed white default fails badly here: it drops below 4.5:1 on any light
- * accent, and dark themes typically pass a *lightened* brand colour.
- *
- * 0.57 is where black overtakes white for WCAG contrast, measured across a hue
- * and chroma sweep rather than guessed. Chroma shifts the true crossover by
- * ±0.02, so colours inside that band land near 4.5:1 whichever way they go —
- * set `theme.foreground` if you need a specific pairing there.
- */
-const AUTO_FOREGROUND =
-  "oklch(from var(--icu-color) clamp(0, (0.57 - l) * 1000, 1) 0 0)";
+const DEFAULT_FOREGROUND = "#fff";
 
 /** Small controls / large panels. `full` on a panel would look absurd, so it's capped. */
 const RADIUS: Record<ThemeRadius, [string, string]> = {
@@ -45,7 +28,7 @@ export type ResolvedTheme = {
 
 export function resolveTheme(theme: Theme | undefined): ResolvedTheme {
   const color = theme?.color ?? DEFAULT_COLOR;
-  const foreground = theme?.foreground ?? AUTO_FOREGROUND;
+  const foreground = theme?.foreground ?? DEFAULT_FOREGROUND;
   const [radius, radiusLg] = RADIUS[theme?.radius ?? "sm"];
   const scheme = theme?.scheme ?? "auto";
 

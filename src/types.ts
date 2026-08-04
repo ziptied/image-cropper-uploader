@@ -65,9 +65,8 @@ export type Theme = {
   color?: string;
   radius?: ThemeRadius;
   /**
-   * Text/icon colour drawn on top of `color`. Defaults to black or white,
-   * chosen automatically from `color`'s own lightness — override only if you
-   * need a specific pairing.
+   * Text/icon colour drawn on top of `color`. Defaults to white; override only
+   * when your accent needs a different foreground.
    */
   foreground?: string;
   /**
@@ -99,6 +98,7 @@ export type Labels = {
   dropzoneHint: string;
   dropzoneDrag: string;
   editExisting: string;
+  removeExisting: string;
   close: string;
 };
 
@@ -117,6 +117,13 @@ export type ImageCropperProps = {
   theme?: Theme;
   /** WebP quality, 0–1. Default 0.9. */
   quality?: number;
+  /**
+   * Optional byte budget for the exported WebP. When set, export retries at
+   * lower quality before returning.
+   */
+  maxOutputBytes?: number;
+  /** Lowest quality to try when `maxOutputBytes` requires compression. */
+  minQuality?: number;
   labels?: Partial<Labels>;
   className?: string;
   /** Hide the built-in confirm/cancel row and drive the editor via its ref. */
@@ -133,12 +140,16 @@ export type ImageCropUploadProps = {
   presets?: RatioPreset[];
   theme?: Theme;
   quality?: number;
+  maxOutputBytes?: number;
+  minQuality?: number;
   labels?: Partial<Labels>;
   validateFile?: (file: File) => { ok: true } | { ok: false; reason: string };
   accept?: string;
   maxBytes?: number;
   /** Shows an "edit existing" affordance that loads this URL into the editor. */
   initialImageUrl?: string;
+  /** Optional app-owned remove action shown alongside the edit-existing action. */
+  onRemoveExisting?: () => void;
   disabled?: boolean;
   className?: string;
   /** Replaces the default dropzone body. */

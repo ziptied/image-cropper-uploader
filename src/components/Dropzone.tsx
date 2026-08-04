@@ -1,6 +1,7 @@
 import * as React from "react";
 
 import ImageScale from "../icons/image-scale";
+import Trash2 from "../icons/trash-2";
 import Upload4 from "../icons/upload-4";
 import type { Labels } from "../types";
 import { cn } from "../utils/cn";
@@ -12,12 +13,16 @@ export type DropzoneProps = {
   sizeHint: string;
   /** Renders an "edit existing" button next to the upload icon. */
   onEditExisting?: () => void;
+  /** Renders an app-owned remove button next to the edit-existing button. */
+  onRemoveExisting?: () => void;
   onFile: (file: File) => void;
   children?: React.ReactNode;
 };
 
 const ICON_CHIP =
-  "flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-transparent transition-[filter] aspect-square";
+  "flex size-16 shrink-0 items-center justify-center self-center rounded-full border border-transparent transition-[filter]";
+const ACTION_CHIP =
+  "inline-flex size-11 shrink-0 items-center justify-center rounded-full border border-transparent transition-[filter] hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50";
 
 // Static: the actual colours resolve from the `--icu-*` vars on the theme root.
 const CHIP_STYLE: React.CSSProperties = {
@@ -31,14 +36,16 @@ export function Dropzone({
   disabled,
   sizeHint,
   onEditExisting,
+  onRemoveExisting,
   onFile,
   children,
 }: DropzoneProps) {
   const inputRef = React.useRef<HTMLInputElement | null>(null);
   const [dragActive, setDragActive] = React.useState(false);
+  const hasExistingActions = onEditExisting || onRemoveExisting;
 
   return (
-    <div className="relative flex flex-1 flex-col">
+    <div className="group/dropzone relative flex flex-1 flex-col">
       <input
         ref={inputRef}
         type="file"
@@ -116,21 +123,36 @@ export function Dropzone({
       </button>
 
       {/* Sibling, not a child: a button inside a button is invalid HTML. */}
-      {onEditExisting ? (
-        <button
-          type="button"
-          aria-label={labels.editExisting}
-          title={labels.editExisting}
-          disabled={disabled}
-          className={cn(
-            ICON_CHIP,
-            "absolute right-4 top-4 h-11 w-11 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50",
-          )}
-          style={CHIP_STYLE}
-          onClick={onEditExisting}
-        >
-          <ImageScale aria-hidden="true" className="h-5 w-5" />
-        </button>
+      {hasExistingActions ? (
+        <div className="pointer-events-auto absolute right-4 top-4 z-10 flex gap-2 opacity-100 transition-opacity sm:pointer-events-none sm:opacity-0 sm:group-focus-within/dropzone:pointer-events-auto sm:group-focus-within/dropzone:opacity-100 sm:group-hover/dropzone:pointer-events-auto sm:group-hover/dropzone:opacity-100">
+          {onEditExisting ? (
+            <button
+              type="button"
+              aria-label={labels.editExisting}
+              title={labels.editExisting}
+              disabled={disabled}
+              className={ACTION_CHIP}
+              style={CHIP_STYLE}
+              onClick={onEditExisting}
+            >
+              <ImageScale aria-hidden="true" className="h-5 w-5" />
+            </button>
+          ) : null}
+
+          {onRemoveExisting ? (
+            <button
+              type="button"
+              aria-label={labels.removeExisting}
+              title={labels.removeExisting}
+              disabled={disabled}
+              className={ACTION_CHIP}
+              style={CHIP_STYLE}
+              onClick={onRemoveExisting}
+            >
+              <Trash2 aria-hidden="true" className="h-5 w-5" />
+            </button>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );

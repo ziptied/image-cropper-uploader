@@ -182,7 +182,9 @@ large `output` was upscaled from however many pixels happened to be on screen.
 1.0 renders at `output.width / cropFrame.width`, drawing from source pixels.
 
 Same `quality` value, genuinely more detail, **noticeably bigger files**. Re-tune
-`quality` if you have size budgets.
+`quality` if you have size budgets. If your upload endpoint has a hard byte cap,
+pass `maxOutputBytes` so export can retry at lower quality while preserving the
+configured output dimensions.
 
 ### 2.5 `ratio` defaults to the output aspect, not 1
 
@@ -277,9 +279,9 @@ theme={{ color: brand, scheme: isDark ? "dark" : "light" }}
 on the confirm button at 4.47:1, just under WCAG AA. Pass `theme.color` if you
 were relying on the previous shade.
 
-Related: `theme.foreground` no longer defaults to white. It now resolves to black
-or white from your accent's lightness, so a light brand colour gets readable dark
-text instead of invisible white text. Set it explicitly to pin a pairing.
+`theme.foreground` controls the text and icon colour drawn on top of
+`theme.color`, including the confirm button. It defaults to white; set it
+explicitly only if your accent needs a different pairing.
 
 ---
 
